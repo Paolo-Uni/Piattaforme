@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "oggetto_ordine")
 @Getter @Setter @ToString @EqualsAndHashCode
@@ -29,10 +31,10 @@ public class OggettoOrdine {
     private String descrizione;
 
     @Column(name = "prezzo", nullable = false)
-    private double prezzo;
+    private BigDecimal prezzo;
 
     @Column(name = "quantita", nullable = false)
-    private int quantita;
+    private Integer quantita;
 
     @ManyToOne
     @JoinColumn(name = "ordine_id")

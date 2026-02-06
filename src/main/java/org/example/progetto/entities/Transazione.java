@@ -29,9 +29,6 @@ public class Transazione {
     @Column(name = "importo", nullable = false)
     private BigDecimal importo;
 
-    @JoinColumn(name = "metodo_di_pagamento", nullable = false)
-    private String metodoDiPagamento;
-
     @Column(name = "esito", nullable = false)
     private boolean esito;
 }

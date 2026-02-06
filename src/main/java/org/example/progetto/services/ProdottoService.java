@@ -1,6 +1,9 @@
 package org.example.progetto.services;
 
 import org.example.progetto.entities.Prodotto;
+import org.example.progetto.exceptions.InvalidQuantityException;
+import org.example.progetto.exceptions.ProductAlreadyExistsException;
+import org.example.progetto.exceptions.ProductNotFoundException;
 import org.example.progetto.repositories.ProdottoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -109,9 +112,9 @@ public class ProdottoService {
     }
 
     @Transactional
-    public void aggiungiProdotto(Prodotto prodotto) {
+    public void aggiungiProdotto(Prodotto prodotto) throws ProductAlreadyExistsException {
         if(prodotto.getId() != 0 && prodottoRepository.existsById(Math.toIntExact(prodotto.getId())))
-            throw new RuntimeException("Prodotto già existente");
+            throw new ProductAlreadyExistsException("Prodotto già esistente");
         prodottoRepository.save(prodotto);
     }
 
@@ -122,8 +125,22 @@ public class ProdottoService {
     }
 
     @Transactional
-    public void rifornisciProdotto(Prodotto prodotto, int quantita){
+    public void aumentaQuantitaProdotto(Long id, int quantita){
+        if(!prodottoRepository.existsById(Math.toIntExact(id)))
+            throw new ProductNotFoundException("Prodotto non trovato");
+        Prodotto prodotto = prodottoRepository.findById(id);
         prodotto.setStock(prodotto.getStock()+quantita);
+        prodottoRepository.save(prodotto);
+    }
+
+    @Transactional
+    public void diminuisciQuantitaProdotto(Long id, int quantita){
+        if(!prodottoRepository.existsById(Math.toIntExact(id)))
+            throw new ProductNotFoundException("Prodotto non trovato");
+        Prodotto prodotto = prodottoRepository.findById(id);
+        if(prodotto.getStock()-quantita<0)
+            throw new InvalidQuantityException("Quantita invalida");
+        prodotto.setStock(prodotto.getStock()-quantita);
         prodottoRepository.save(prodotto);
     }
 

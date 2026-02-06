@@ -28,4 +28,6 @@ public interface ProdottoRepository extends JpaRepository<Prodotto,Integer> {
     List<Prodotto> findByNome(String nome);
 
     Page<Prodotto> findByNome(String nome, Pageable pageable);
+
+    Prodotto findById(Long id);
 }
