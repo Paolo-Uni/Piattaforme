@@ -28,6 +28,9 @@ public class Cliente {
     @Column(name = "email", nullable = false)
     private String email;
 
+    @Column(name = "telefono", nullable = false)
+    private String telefono;
+
     @OneToMany(mappedBy = "cliente")
     private List<Ordine> ordini = new ArrayList<>();
 

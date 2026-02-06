@@ -6,12 +6,11 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "prodotto", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"nome", "categoria_id", "marca_marca_id"})
+        @UniqueConstraint(columnNames = {"nome", "categoria", "marca", "colore", "taglia"})
 })
 @Getter @Setter @ToString @EqualsAndHashCode
 public class Prodotto {
@@ -27,15 +26,21 @@ public class Prodotto {
     @Column(name = "descrizione")
     private String descrizione;
 
-    @ManyToOne
-    @JoinColumn(name = "categoria_id", nullable = false)
-    private Categoria categoria;
+    @Column(name = "colore")
+    private String colore;
 
-    @ManyToOne
-    @JoinColumn(name = "marca_marca_id", nullable = false)
-    private Marca marca;
+    @Column(name = "taglia")
+    private String taglia;
 
-    @OneToMany(mappedBy = "prodotto", cascade = CascadeType.ALL)
-    private List<VarianteProdotto> varianti = new ArrayList<>();
+    @Column(name = "stock", nullable = false)
+    private Integer stock;
 
+    @Column(name = "prezzo", nullable = false)
+    private BigDecimal prezzo;
+
+    @Column(name = "categoria", nullable = false)
+    private String categoria;
+
+    @Column(name = "marca", nullable = false)
+    private String marca;
 }

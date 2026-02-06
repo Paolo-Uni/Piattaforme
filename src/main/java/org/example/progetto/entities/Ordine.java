@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,10 +26,19 @@ public class Ordine {
     private Cliente cliente;
 
     @Column(name = "data_ordine", nullable = false)
-    private LocalDateTime dataOrdine;
+    private LocalDateTime dataOrdine = LocalDateTime.now();
 
     @Column(name = "totale", nullable = false)
-    private double totale;
+    private BigDecimal totale;
+
+    @OneToOne(mappedBy = "ordine")
+    private Spedizione spedizione;
+
+    @Column(name="stato", nullable = false)
+    private String stato;
+
+    @OneToOne(mappedBy = "ordine")
+    private Transazione transazione;
 
     @OneToMany(mappedBy = "ordine",cascade = CascadeType.ALL)
     private List<OggettoOrdine> oggetti = new ArrayList<>();

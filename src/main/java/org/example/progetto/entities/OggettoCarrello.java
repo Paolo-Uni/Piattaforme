@@ -7,9 +7,7 @@ import lombok.Setter;
 import lombok.ToString;
 
 @Entity
-@Table(name = "oggetto_carrello", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"variante", "carrello_carrello_id"})
-})
+@Table(name = "oggetto_carrello")
 @Getter @Setter @ToString @EqualsAndHashCode
 public class OggettoCarrello {
 
@@ -19,11 +17,11 @@ public class OggettoCarrello {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "variante_id", nullable = false)
-    private VarianteProdotto variante;
+    @JoinColumn(name = "prodotto_id", nullable = false)
+    private Prodotto prodotto;
 
     @Column(name = "quantita", nullable = false)
-    private int quantita;
+    private Integer quantita;
 
     @ManyToOne
     @JoinColumn(name = "carrello_carrello_id", nullable = false)

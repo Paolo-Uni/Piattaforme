@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,10 +24,10 @@ public class Carrello {
     @JoinColumn(name = "cliente_id")
     private Cliente cliente;
 
-    @Column(name = "anonymous_id")
-    private String anonymousId;
+    @Column(name = "totale_carrello", precision = 10, scale = 2)
+    private BigDecimal totaleCarrello = BigDecimal.ZERO;
 
-    @OneToMany(mappedBy = "carrello")
+    @OneToMany(mappedBy = "carrello", cascade = CascadeType.ALL)
     private List<OggettoCarrello> oggetti = new ArrayList<>();
 
 }
