@@ -11,7 +11,6 @@ import org.example.progetto.exceptions.ProductNotFoundException;
 import org.example.progetto.repositories.ClienteRepository;
 import org.example.progetto.repositories.OggettoOrdineRepository;
 import org.example.progetto.repositories.OrdineRepository;
-import org.example.progetto.repositories.ProdottoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,10 +33,6 @@ public class OrdineService {
 
     @Autowired
     private ClienteRepository clienteRepository;
-
-
-    @Autowired
-    private ProdottoRepository prodottoRepository;
 
     @Autowired
     private OggettoOrdineRepository oggettoOrdineRepository;

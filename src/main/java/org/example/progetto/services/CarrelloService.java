@@ -286,7 +286,7 @@ public class CarrelloService {
 
         ordine.setCliente(cliente);
         ordine.setDataOrdine(LocalDateTime.now());
-        ordine.setStato("Processamento in corso...");
+        ordine.setStato("Elaborazione in corso...");
         ordineRepository.save(ordine);
 
         transazione.setOrdine(ordine);

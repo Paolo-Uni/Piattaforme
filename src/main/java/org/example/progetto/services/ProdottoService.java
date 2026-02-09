@@ -116,14 +116,16 @@ public class ProdottoService {
         if(prodotto.getId() != 0 && prodottoRepository.existsById(Math.toIntExact(prodotto.getId())))
             throw new ProductAlreadyExistsException("Prodotto già esistente");
         if(prodotto.getStock() <= 0)
-            throw new InvalidQuantityException("La quantita inserita del prodotto non è valida");
+            throw new InvalidQuantityException("La quantità inserita del prodotto non è valida");
         prodottoRepository.save(prodotto);
     }
 
     @Transactional
-    public void deleteProdotto(Prodotto prodotto) {
+    public void cancellaProdotto(Prodotto prodotto) {
         if(prodotto.getId() != 0 && prodottoRepository.existsById(Math.toIntExact(prodotto.getId())))
             prodottoRepository.delete(prodotto);
+        else
+            throw new ProductNotFoundException("Prodotto non trovato");
     }
 
     @Transactional
@@ -141,7 +143,7 @@ public class ProdottoService {
             throw new ProductNotFoundException("Prodotto non trovato");
         Prodotto prodotto = prodottoRepository.findById(id);
         if(prodotto.getStock()-quantita<0)
-            throw new InvalidQuantityException("Quantita invalida");
+            throw new InvalidQuantityException("Quantità invalida");
         prodotto.setStock(prodotto.getStock()-quantita);
         prodottoRepository.save(prodotto);
     }
