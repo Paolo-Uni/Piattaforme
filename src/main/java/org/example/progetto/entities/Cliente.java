@@ -31,6 +31,9 @@ public class Cliente {
     @Column(name = "telefono", nullable = false)
     private String telefono;
 
+    @Column(name="indirizzo", length=255)
+    private String indirizzo;
+
     @OneToMany(mappedBy = "cliente")
     private List<Ordine> ordini = new ArrayList<>();
 

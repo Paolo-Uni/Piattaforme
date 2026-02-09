@@ -7,6 +7,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface CarrelloRepository extends JpaRepository<Carrello,Long> {
-
     Carrello findByCliente(Cliente cliente);
 }

@@ -99,7 +99,6 @@ public class CarrelloService {
         } else {
             // Aggiungo il prodotto al carrello
             OggettoCarrello aggiunta = new OggettoCarrello();
-            aggiunta.setCarrello(carrello);
             aggiunta.setProdotto(prod);
             aggiunta.setQuantita(quantita);
             aggiunta.setCarrello(carrello);
@@ -109,7 +108,7 @@ public class CarrelloService {
     }
 
     @Transactional
-    public void incrementaquantitaprodottocarrello(String email, Long idProdotto) throws ClienteNotFoundException, ProductNotFoundException, InvalidQuantityException {
+    public void incrementaQuantitaOggettoCarrello(String email, Long idProdotto) throws ClienteNotFoundException, ProductNotFoundException, InvalidQuantityException {
         Cliente cliente = clienteRepository.findByEmail(email);
         if (cliente == null) {
             throw new ClienteNotFoundException("Cliente non trovato!");
@@ -176,7 +175,7 @@ public class CarrelloService {
     }
 
     @Transactional
-    public void decrementaquantitaprodottocarrello(String email, Long idProdotto)
+    public void decrementaQuantitaOggettoCarrello(String email, Long idProdotto)
             throws ClienteNotFoundException, InvalidCartOperationException {
 
         Cliente cliente = clienteRepository.findByEmail(email);
@@ -227,8 +226,8 @@ public class CarrelloService {
         entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
 
         // Recupero e locko tutti gli elementi del carrello
-        Set<OggettoCarrello> cartProducts = oggettoCarrelloRepository.findByCarrello(carrello);
-        for (OggettoCarrello oggetto : cartProducts) {
+        Set<OggettoCarrello> oggetti = oggettoCarrelloRepository.findByCarrello(carrello);
+        for (OggettoCarrello oggetto : oggetti) {
             entityManager.lock(oggetto, LockModeType.PESSIMISTIC_WRITE);
         }
 
@@ -253,17 +252,17 @@ public class CarrelloService {
         entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
 
         // Recupero e locko gli elementi del carrello
-        Set<OggettoCarrello> prodottiUser = oggettoCarrelloRepository.findByCarrello(carrello);
-        if (prodottiUser.isEmpty()) {
+        Set<OggettoCarrello> prodottiCliente = oggettoCarrelloRepository.findByCarrello(carrello);
+        if (prodottiCliente.isEmpty()) {
             throw new InvalidCartOperationException("Il carrello è vuoto. Aggiungi prodotti prima di procedere all'ordine.");
         }
 
         // Ordino gli elementi per evitare deadlock
-        List<OggettoCarrello> prodottiUserList = new ArrayList<>(prodottiUser);
-        prodottiUserList.sort(Comparator.comparingLong(OggettoCarrello::getId));
+        List<OggettoCarrello> oggetti = new ArrayList<>(prodottiCliente);
+        oggetti.sort(Comparator.comparingLong(OggettoCarrello::getId));
 
         // Verifico la disponibilità e locko i prodotti
-        for (OggettoCarrello oggetto : prodottiUserList) {
+        for (OggettoCarrello oggetto : oggetti) {
             // Lock dell'elemento del carrello
             entityManager.lock(oggetto, LockModeType.PESSIMISTIC_WRITE);
 
@@ -292,7 +291,8 @@ public class CarrelloService {
 
         transazione.setOrdine(ordine);
         transazione.setData(Instant.now());
-        transazione.setImporto(calcolaImporto(prodottiUser));
+        BigDecimal importo = calcolaImporto(prodottiCliente);
+        transazione.setImporto(importo);
 
         Spedizione spedizione = new Spedizione();
         spedizione.setOrdine(ordine);
@@ -308,24 +308,26 @@ public class CarrelloService {
             svuotaCarrello(email);
 
             // Salvo i prodotti ordinati
-            for (OggettoCarrello oc : prodottiUserList) {
-                OggettoOrdine oo = new OggettoOrdine();
-                oo.setNomeProdotto(oc.getProdotto().getNome());
-                oo.setTaglia(oc.getProdotto().getTaglia());
-                oo.setColore(oc.getProdotto().getColore());
-                oo.setDescrizione(oc.getProdotto().getDescrizione());
-                oo.setPrezzo(oc.getProdotto().getPrezzo());
-                oo.setQuantita(oc.getQuantita());
-                oo.setOrdine(ordine);
-                oggettoOrdineRepository.save(oo);
+            for (OggettoCarrello oc : oggetti) {
+                OggettoOrdine oggetto = new OggettoOrdine();
+                oggetto.setNomeProdotto(oc.getProdotto().getNome());
+                oggetto.setTaglia(oc.getProdotto().getTaglia());
+                oggetto.setColore(oc.getProdotto().getColore());
+                oggetto.setDescrizione(oc.getProdotto().getDescrizione());
+                oggetto.setPrezzo(oc.getProdotto().getPrezzo());
+                oggetto.setQuantita(oc.getQuantita());
+                oggetto.setOrdine(ordine);
+                ordine.getOggetti().add(oggetto);
+                oggettoOrdineRepository.save(oggetto);
             }
+            ordine.setTotale(importo);
 
         } else {
             transazione.setEsito(false);
             ordine.setStato("Pagamento fallito");
 
             // Ripristino la quantità dei prodotti
-            for (OggettoCarrello oc : prodottiUserList) {
+            for (OggettoCarrello oc : oggetti) {
                 Prodotto prodotto = prodottoRepository.findById(oc.getProdotto().getId());
                 // Lock del prodotto
                 entityManager.lock(prodotto, LockModeType.PESSIMISTIC_WRITE);

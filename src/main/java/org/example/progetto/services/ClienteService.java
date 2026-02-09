@@ -45,7 +45,7 @@ public class ClienteService {
     }
 
     @Transactional(readOnly = true)
-    public ClienteDTO getCliente(long id) {
+    public ClienteDTO getCliente(Long id) {
         Cliente cliente =  clienteRepository.findById(id)
                 .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato con id: " + id));
         return toDTO(cliente);
@@ -94,8 +94,8 @@ public class ClienteService {
     }
 
     @Transactional
-    public Cliente saveCliente(Cliente c){
-        return clienteRepository.save(c);
+    public void saveCliente(Cliente c){
+        clienteRepository.save(c);
     }
 
 

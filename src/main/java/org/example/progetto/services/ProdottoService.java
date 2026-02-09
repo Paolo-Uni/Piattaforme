@@ -115,6 +115,8 @@ public class ProdottoService {
     public void aggiungiProdotto(Prodotto prodotto) throws ProductAlreadyExistsException {
         if(prodotto.getId() != 0 && prodottoRepository.existsById(Math.toIntExact(prodotto.getId())))
             throw new ProductAlreadyExistsException("Prodotto già esistente");
+        if(prodotto.getStock() <= 0)
+            throw new InvalidQuantityException("La quantita inserita del prodotto non è valida");
         prodottoRepository.save(prodotto);
     }
 

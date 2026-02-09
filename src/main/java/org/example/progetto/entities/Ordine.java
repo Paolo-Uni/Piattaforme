@@ -26,10 +26,10 @@ public class Ordine {
     private Cliente cliente;
 
     @Column(name = "data_ordine", nullable = false)
-    private LocalDateTime dataOrdine = LocalDateTime.now();
+    private LocalDateTime dataOrdine;
 
     @Column(name = "totale", nullable = false)
-    private BigDecimal totale;
+    private BigDecimal totale = BigDecimal.ZERO;
 
     @OneToOne(mappedBy = "ordine")
     private Spedizione spedizione;

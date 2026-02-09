@@ -9,6 +9,5 @@ import java.util.List;
 
 @Repository
 public interface OggettoOrdineRepository extends JpaRepository<OggettoOrdine,Long> {
-
     List<OggettoOrdine> findOggettiByOrdine(Ordine ordine);
 }
