@@ -1,31 +1,60 @@
-<div class="container mt-5" *ngIf="product; else loading">
-  <button class="btn btn-link mb-3" routerLink="/products">&larr; Torna al catalogo</button>
-  <div class="card shadow-lg">
-    <div class="row g-0">
-      <div class="col-md-5 bg-light d-flex align-items-center justify-content-center">
-        <i class="bi bi-image text-secondary" style="font-size: 5rem;"></i>
+<div class="container mt-5">
+  @if (loading()) {
+    <div class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Caricamento...</span>
       </div>
-      <div class="col-md-7">
-        <div class="card-body p-5">
-          <small class="text-uppercase text-muted">{{ product.categoria }} - {{ product.marca }}</small>
-          <h1 class="fw-bold mt-2">{{ product.nome }}</h1>
-          <h2 class="text-primary my-3">{{ product.prezzo | currency:'EUR' }}</h2>
-          <p class="lead">{{ product.descrizione }}</p>
+    </div>
+  } @else if (product(); as p) {
+    <div class="row">
+      <div class="col-md-6 mb-4">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-5 d-flex align-items-center justify-content-center bg-light" style="min-height: 400px;">
+            <i class="bi bi-bag-heart text-primary" style="font-size: 8rem;"></i>
+          </div>
+        </div>
+      </div>
 
-          <dl class="row mt-4">
-            <dt class="col-sm-3">Taglia</dt><dd class="col-sm-9">{{ product.taglia }}</dd>
-            <dt class="col-sm-3">Colore</dt><dd class="col-sm-9">{{ product.colore }}</dd>
-            <dt class="col-sm-3">Stock</dt><dd class="col-sm-9">{{ product.stock }} pezzi</dd>
-          </dl>
+      <div class="col-md-6">
+        <h1 class="display-5 fw-bold text-dark mb-2">{{ p.nome }}</h1>
+        <p class="lead text-muted mb-4">{{ p.marca }} - {{ p.categoria }}</p>
 
-          <button class="btn btn-success btn-lg w-100 mt-3"
-                  [disabled]="product.stock <= 0"
-                  (click)="addToCart()">
-            {{ product.stock > 0 ? 'Aggiungi al Carrello' : 'Non Disponibile' }}
+        <div class="fs-2 fw-bold text-primary mb-4">
+          {{ p.prezzo | currency:'EUR' }}
+        </div>
+
+        <p class="mb-4">{{ p.descrizione }}</p>
+
+        <div class="d-flex align-items-center gap-3 mb-4">
+          @if (p.stock > 0) {
+            <span class="badge bg-success-subtle text-success px-3 py-2 fs-6">
+              <i class="bi bi-check-circle me-1"></i> Disponibile ({{p.stock}} pz.)
+            </span>
+          } @else {
+            <span class="badge bg-danger-subtle text-danger px-3 py-2 fs-6">
+              <i class="bi bi-x-circle me-1"></i> Esaurito
+            </span>
+          }
+        </div>
+
+        <div class="d-grid gap-2 col-lg-6">
+          <button
+            class="btn btn-primary btn-lg"
+            (click)="addToCart(p)"
+            [disabled]="p.stock <= 0">
+            <i class="bi bi-cart-plus me-2"></i>
+            Aggiungi al Carrello
+          </button>
+
+          <button class="btn btn-outline-secondary" routerLink="/products">
+            <i class="bi bi-arrow-left me-2"></i> Torna alla lista
           </button>
         </div>
       </div>
     </div>
-  </div>
+  } @else {
+    <div class="alert alert-warning text-center">
+      Prodotto non trovato. <a routerLink="/products" class="alert-link">Torna alla lista</a>.
+    </div>
+  }
 </div>
-<ng-template #loading><p class="text-center mt-5">Caricamento...</p></ng-template>

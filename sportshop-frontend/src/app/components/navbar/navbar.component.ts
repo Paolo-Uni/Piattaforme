@@ -1,27 +1,34 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { KeycloakService } from 'keycloak-angular';
 
 @Component({
   selector: 'app-navbar',
-  standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: './navbar.component.html'
 })
-export class NavbarComponent {
-  loggedIn = false;
-  isAdmin = false;
-  username = '';
+export class NavbarComponent implements OnInit {
+  private readonly keycloak = inject(KeycloakService);
 
-  constructor(private keycloak: KeycloakService) {
-    this.loggedIn = this.keycloak.isLoggedIn();
-    if (this.loggedIn) {
-      this.username = this.keycloak.getUsername();
-      this.isAdmin = this.keycloak.getUserRoles().includes('ADMIN');
+  // Signals per lo stato
+  loggedIn = signal(false);
+  isAdmin = signal(false);
+  username = signal('');
+
+  async ngOnInit() {
+    const isLogged = this.keycloak.isLoggedIn();
+    this.loggedIn.set(isLogged);
+
+    if (isLogged) {
+      this.username.set(this.keycloak.getUsername());
+      this.isAdmin.set(this.keycloak.getUserRoles().includes('ADMIN'));
     }
   }
 
   login() { this.keycloak.login(); }
-  logout() { this.keycloak.logout(); }
+
+  logout() {
+    this.keycloak.logout(window.location.origin);
+  }
 }

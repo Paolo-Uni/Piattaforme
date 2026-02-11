@@ -1,7 +1,7 @@
 import { APP_INITIALIZER, ApplicationConfig, PLATFORM_ID } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideHttpClient, withInterceptors, withFetch } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { KeycloakService } from 'keycloak-angular';
 import { authInterceptor } from './core/auth.interceptor';
@@ -41,7 +41,11 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
     provideAnimations(),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    // MODIFICA: Aggiunto withFetch() per risolvere NG02801 e migliorare il supporto SSR
+    provideHttpClient(
+      withFetch(),
+      withInterceptors([authInterceptor])
+    ),
     {
       provide: APP_INITIALIZER,
       useFactory: initializeKeycloak,

@@ -6,12 +6,14 @@ import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.stereotype.Component; // Import necessario
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+@Component // <--- Aggiungi questa annotazione per renderlo un Bean gestito da Spring
 public class CustomJwtConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
     @Override

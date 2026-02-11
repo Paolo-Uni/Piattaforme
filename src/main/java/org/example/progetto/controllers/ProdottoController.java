@@ -69,6 +69,20 @@ public class ProdottoController {
         }
     }
 
+    // === METODO MANCANTE AGGIUNTO ===
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getProdotto(@PathVariable Long id) {
+        try {
+            // Assicurati che nel ProdottoService esista un metodo getProdotto(Long id)
+            // che restituisca un Prodotto o lanci ProductNotFoundException
+            Prodotto p = prodottoService.getProdottoById(id);
+            return ResponseEntity.ok(p);
+        } catch (ProductNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseMessage("Prodotto non trovato"));
+        }
+    }
+    // ================================
+
     @GetMapping("/search")
     public ResponseEntity<Page<Prodotto>> ricercaDinamica(
             @RequestParam(required = false) String nome,

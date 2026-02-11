@@ -1,25 +1,56 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4 shadow-sm">
-  <a class="navbar-brand fw-bold" routerLink="/">
-    <i class="bi bi-basket2-fill me-2"></i>SportShop
-  </a>
-  <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-    <span class="navbar-toggler-icon"></span>
-  </button>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+  <div class="container">
+    <a class="navbar-brand fw-bold d-flex align-items-center gap-2" routerLink="/">
+      <i class="bi bi-shop"></i> SportShop
+    </a>
 
-  <div class="collapse navbar-collapse" id="navbarNav">
-    <ul class="navbar-nav me-auto">
-      <li class="nav-item"><a class="nav-link" routerLink="/products">Prodotti</a></li>
-      <li class="nav-item" *ngIf="loggedIn"><a class="nav-link" routerLink="/cart">Carrello</a></li>
-      <li class="nav-item" *ngIf="loggedIn"><a class="nav-link" routerLink="/orders">Ordini</a></li>
-      <li class="nav-item" *ngIf="loggedIn && isAdmin"><a class="nav-link text-warning" routerLink="/admin">Admin</a></li>
-    </ul>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
 
-    <div class="d-flex align-items-center gap-3">
-      <div *ngIf="loggedIn" class="text-light">
-        <small>Ciao, {{ username }}</small>
-      </div>
-      <button *ngIf="!loggedIn" class="btn btn-primary btn-sm" (click)="login()">Accedi</button>
-      <button *ngIf="loggedIn" class="btn btn-outline-danger btn-sm" (click)="logout()">Esci</button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item">
+          <a class="nav-link" routerLink="/products" routerLinkActive="active">Prodotti</a>
+        </li>
+      </ul>
+
+      <ul class="navbar-nav ms-auto align-items-center gap-2">
+        @if (!loggedIn()) {
+          <li class="nav-item">
+            <button class="btn btn-outline-light btn-sm" (click)="login()">
+              <i class="bi bi-box-arrow-in-right me-1"></i> Login
+            </button>
+          </li>
+        } @else {
+          <li class="nav-item">
+            <a class="nav-link position-relative" routerLink="/cart">
+              <i class="bi bi-cart3 fs-5"></i>
+            </a>
+          </li>
+
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" role="button" data-bs-toggle="dropdown">
+              <i class="bi bi-person-circle"></i>
+              <span>{{ username() }}</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" routerLink="/profile">Il mio Profilo</a></li>
+              <li><a class="dropdown-item" routerLink="/orders">I miei Ordini</a></li>
+              @if (isAdmin()) {
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header">Amministrazione</h6></li>
+              }
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <button class="dropdown-item text-danger" (click)="logout()">
+                  <i class="bi bi-box-arrow-right me-2"></i> Logout
+                </button>
+              </li>
+            </ul>
+          </li>
+        }
+      </ul>
     </div>
   </div>
 </nav>

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { ProductService } from '../../services/product.service';
@@ -8,36 +8,49 @@ import { KeycloakService } from 'keycloak-angular';
 
 @Component({
   selector: 'app-product-detail',
-  standalone: true,
   imports: [CommonModule, RouterModule],
-  templateUrl: './product-detail.component.html'
+  templateUrl: './product-detail.component.html',
+  styleUrls: ['./product-detail.component.css']
 })
 export class ProductDetailComponent implements OnInit {
-  product: Product | null = null;
+  private readonly route = inject(ActivatedRoute);
+  private readonly productService = inject(ProductService);
+  private readonly cartService = inject(CartService);
+  private readonly keycloak = inject(KeycloakService);
 
-  constructor(
-    private route: ActivatedRoute,
-    private productService: ProductService,
-    private cartService: CartService,
-    private keycloak: KeycloakService
-  ) {}
+  product = signal<Product | null>(null);
+  loading = signal(true);
 
-  ngOnInit() {
-    const id = this.route.snapshot.paramMap.get('id');
+  ngOnInit(): void {
+    const id = Number(this.route.snapshot.paramMap.get('id'));
     if (id) {
-      this.productService.getProductById(Number(id)).subscribe(p => this.product = p);
-    }
-  }
-
-  addToCart() {
-    if (this.product) {
-      this.cartService.addToCart(this.product.id, 1).subscribe({
-        next: () => alert('Prodotto aggiunto!'),
+      this.productService.getProductById(id).subscribe({
+        next: (data) => {
+          this.product.set(data);
+          this.loading.set(false);
+        },
         error: (err) => {
-          if (err.status === 401) this.keycloak.login();
-          else alert(err.error?.message);
+          console.error('Errore caricamento prodotto', err);
+          this.loading.set(false);
         }
       });
     }
+  }
+
+  addToCart(p: Product) {
+    // 1. CONTROLLA SE L'UTENTE È LOGGATO
+    if (!this.keycloak.isLoggedIn()) {
+      // Se non è loggato, reindirizza al login e poi torna qui
+      this.keycloak.login({
+        redirectUri: window.location.origin + '/products/' + p.id
+      });
+      return;
+    }
+
+    // 2. SE LOGGATO, PROCEDI CON L'AGGIUNTA AL CARRELLO
+    this.cartService.addToCart(p.id, 1).subscribe({
+      next: () => alert('Prodotto aggiunto al carrello!'),
+      error: (err) => alert('Errore: ' + (err.error?.message || 'Impossibile aggiungere al carrello'))
+    });
   }
 }

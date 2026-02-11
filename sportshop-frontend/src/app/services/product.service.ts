@@ -1,45 +1,58 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Page, Product } from '../models/product.model';
 
+export interface ProductFilters {
+  nome?: string;
+  marca?: string;
+  categoria?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ProductService {
-  private apiUrl = 'http://localhost:8082/prodotto';
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = 'http://localhost:8082/prodotto';
 
-  constructor(private http: HttpClient) {}
+  /**
+   * Cerca prodotti con filtri e paginazione.
+   */
+  searchProducts(filters: ProductFilters, page: number = 0, size: number = 10): Observable<Page<Product>> {
+    let params = new HttpParams()
+      .set('pageNumber', page)
+      .set('pageSize', size);
 
-  searchProducts(filters: any, page: number = 0, size: number = 10): Observable<Page<Product>> {
-    let params = new HttpParams().set('pageNumber', page).set('pageSize', size);
     if (filters.nome) params = params.set('nome', filters.nome);
     if (filters.marca) params = params.set('marca', filters.marca);
     if (filters.categoria) params = params.set('categoria', filters.categoria);
-    return this.http.get<Page<Product>>(`${this.apiUrl}/search`, { params });
+
+    return this.http.get<Page<Product>>(`${this.apiUrl}/search`, {params});
   }
 
-  // Metodi aggiunti per completezza
   getProductById(id: number): Observable<Product> {
-    // Nota: Ho visto nel backend che hai commentato/riaggiunto questo endpoint. Assicurati che ci sia in ProdottoService.java!
-    // Se non c'è, Angular darà errore 404 o 405.
     return this.http.get<Product>(`${this.apiUrl}/${id}`);
   }
 
-  // src/app/services/product.service.ts
-  getProducts(): Observable<any> {
-    // Nota l'URL: deve corrispondere a quello dello script PowerShell
-    return this.http.get<any>(`http://localhost:8082/prodotto/paged`);
+  // ESEMPIO CORRETTO
+  getProdotto(id: number): Observable<Product> {
+    // Nota lo slash prima di ${id}
+    return this.http.get<Product>(`${this.apiUrl}/prodotto/${id}`);
   }
 
   // Metodi ADMIN
-  createProduct(product: Product): Observable<any> {
-    return this.http.post(`${this.apiUrl}/create`, product);
+  createProduct(product: Product): Observable<Product> {
+    return this.http.post<Product>(`${this.apiUrl}/create`, product);
   }
 
-  deleteProduct(id: number): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/delete?idProdotto=${id}`);
+  deleteProduct(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/delete`, {
+      params: {idProdotto: id}
+    });
   }
 
-  addStock(id: number, quantita: number): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/add-stock?idProdotto=${id}&quantita=${quantita}`, {});
+  addStock(id: number, quantita: number): Observable<void> {
+    return this.http.patch<void>(`${this.apiUrl}/add-stock`, {}, {
+      params: {idProdotto: id, quantita: quantita}
+    });
   }
 }
