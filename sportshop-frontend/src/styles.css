@@ -1,0 +1,7 @@
+/* You can add global styles to this file, and also import other style files */
+@import 'bootstrap/dist/css/bootstrap.min.css';
+
+/* Opzionale: Aggiungi un po' di padding al body per non nascondere il contenuto sotto la navbar fissa */
+body {
+  padding-top: 20px;
+}
