@@ -7,6 +7,7 @@ import org.example.progetto.exceptions.InvalidQuantityException;
 import org.example.progetto.exceptions.ProductNotFoundException;
 import org.example.progetto.services.CarrelloService;
 import org.example.progetto.support.CustomJwt;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,7 +31,7 @@ public class CarrelloController {
 
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/aggiungi")
-    public ResponseEntity<Map<String, String>> aggiungiAlCarrello(@RequestParam @NotNull @Positive int idProdotto, @RequestParam(value = "quantita", defaultValue = "1") @Positive int quantita) {
+    public ResponseEntity<Map<String, String>> aggiungiAlCarrello(@RequestParam @NotNull @Positive Long idProdotto, @RequestParam(value = "quantita", defaultValue = "1") @Positive int quantita) {
 
         var jwt = (CustomJwt) SecurityContextHolder.getContext().getAuthentication();
         String email = jwt.getName();

@@ -31,24 +31,21 @@ public class ProdottoService {
     public List<Prodotto> getProdotti(int pageNumber, int pageSize, String sortBy) {
         Pageable paging = PageRequest.of(pageNumber, pageSize, Sort.by(sortBy));
         Page<Prodotto> prodotti = prodottoRepository.findAll(paging);
-        if(prodotti.hasContent())
-            return prodotti.getContent();
-        else
-            return new ArrayList<>();
+        return prodotti.hasContent() ? prodotti.getContent() : new ArrayList<>();
     }
+
+    // ... I metodi di ricerca (ByNome, ByMarca, ecc.) funzionano già bene perché ritornano Liste ...
+
     @Transactional(readOnly = true)
     public List<Prodotto> getProdottiByNome(String nome) {
         return prodottoRepository.findByNome(nome);
     }
-
+    
     @Transactional(readOnly = true)
     public List<Prodotto> getProdottiByNome(String nome, int pageNumber, int pageSize, String sortBy) {
         Pageable paging = PageRequest.of(pageNumber, pageSize, Sort.by(sortBy));
         Page<Prodotto> prodotti = prodottoRepository.findByNome(nome, paging);
-        if(prodotti.hasContent())
-            return prodotti.getContent();
-        else
-            return new ArrayList<>();
+        return prodotti.hasContent() ? prodotti.getContent() : new ArrayList<>();
     }
 
     @Transactional(readOnly = true)
@@ -60,25 +57,19 @@ public class ProdottoService {
     public List<Prodotto> getProdottiByMarca(String marca, int pageNumber, int pageSize, String sortBy) {
         Pageable paging = PageRequest.of(pageNumber, pageSize, Sort.by(sortBy));
         Page<Prodotto> prodotti = prodottoRepository.findByMarca(marca, paging);
-        if(prodotti.hasContent())
-            return prodotti.getContent();
-        else
-            return new ArrayList<>();
+        return prodotti.hasContent() ? prodotti.getContent() : new ArrayList<>();
     }
 
     @Transactional(readOnly = true)
     public List<Prodotto> getProdottiByCategoria(String categoria) {
-        return  prodottoRepository.findByCategoria(categoria);
+        return prodottoRepository.findByCategoria(categoria);
     }
 
     @Transactional(readOnly = true)
     public List<Prodotto> getProdottiByCategoria(String categoria, int pageNumber, int pageSize, String sortBy) {
         Pageable paging = PageRequest.of(pageNumber, pageSize, Sort.by(sortBy));
         Page<Prodotto> prodotti = prodottoRepository.findByCategoria(categoria, paging);
-        if(prodotti.hasContent())
-            return prodotti.getContent();
-        else
-            return new ArrayList<>();
+        return prodotti.hasContent() ? prodotti.getContent() : new ArrayList<>();
     }
 
     @Transactional(readOnly = true)
@@ -90,10 +81,7 @@ public class ProdottoService {
     public List<Prodotto> getProdottiByColore(String colore, int pageNumber, int pageSize, String sortBy) {
         Pageable paging = PageRequest.of(pageNumber, pageSize, Sort.by(sortBy));
         Page<Prodotto> prodotti = prodottoRepository.findByColore(colore, paging);
-        if(prodotti.hasContent())
-            return prodotti.getContent();
-        else
-            return new ArrayList<>();
+        return prodotti.hasContent() ? prodotti.getContent() : new ArrayList<>();
     }
 
     @Transactional(readOnly = true)
@@ -105,15 +93,13 @@ public class ProdottoService {
     public List<Prodotto> getProdottiByTaglia(String taglia, int pageNumber, int pageSize, String sortBy) {
         Pageable paging = PageRequest.of(pageNumber, pageSize, Sort.by(sortBy));
         Page<Prodotto> prodotti = prodottoRepository.findByTaglia(taglia, paging);
-        if(prodotti.hasContent())
-            return prodotti.getContent();
-        else
-            return new ArrayList<>();
+        return prodotti.hasContent() ? prodotti.getContent() : new ArrayList<>();
     }
 
     @Transactional
     public void aggiungiProdotto(Prodotto prodotto) throws ProductAlreadyExistsException {
-        if(prodotto.getId() != null && prodottoRepository.existsById((prodotto.getId())))
+        // FIX: Rimosso cast a int, e controllo null safety su ID
+        if(prodotto.getId() != null && prodotto.getId() != 0 && prodottoRepository.existsById(prodotto.getId()))
             throw new ProductAlreadyExistsException("Prodotto già esistente");
         if(prodotto.getStock() <= 0)
             throw new InvalidQuantityException("La quantità inserita del prodotto non è valida");
@@ -122,30 +108,33 @@ public class ProdottoService {
 
     @Transactional
     public void cancellaProdotto(Long idProdotto) {
-        if(idProdotto != 0 && prodottoRepository.existsById(idProdotto))
-            prodottoRepository.delete(prodottoRepository.findById(idProdotto));
+        // FIX: Rimosso cast a int
+        if(idProdotto != null && idProdotto != 0 && prodottoRepository.existsById(idProdotto))
+            prodottoRepository.delete(prodottoRepository.findById(idProdotto).get());
         else
             throw new ProductNotFoundException("Prodotto non trovato");
     }
 
     @Transactional
     public void aumentaQuantitaProdotto(Long id, int quantita){
-        if(!prodottoRepository.existsById(id))
-            throw new ProductNotFoundException("Prodotto non trovato");
-        Prodotto prodotto = prodottoRepository.findById(id);
-        prodotto.setStock(prodotto.getStock()+quantita);
+        // FIX: Uso findById().orElseThrow() per gestire l'Optional
+        Prodotto prodotto = prodottoRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
+        
+        prodotto.setStock(prodotto.getStock() + quantita);
         prodottoRepository.save(prodotto);
     }
 
     @Transactional
     public void diminuisciQuantitaProdotto(Long id, int quantita){
-        if(!prodottoRepository.existsById(id))
-            throw new ProductNotFoundException("Prodotto non trovato");
-        Prodotto prodotto = prodottoRepository.findById(id);
-        if(prodotto.getStock()-quantita<0)
+        // FIX: Uso findById().orElseThrow()
+        Prodotto prodotto = prodottoRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
+        
+        if(prodotto.getStock() - quantita < 0)
             throw new InvalidQuantityException("Quantità invalida");
-        prodotto.setStock(prodotto.getStock()-quantita);
+        
+        prodotto.setStock(prodotto.getStock() - quantita);
         prodottoRepository.save(prodotto);
     }
-
 }
