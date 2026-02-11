@@ -2,26 +2,47 @@ package org.example.progetto.configuration;
 
 import org.example.progetto.support.CustomJwtConverter;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.web.SecurityFilterChain;
-import org.example.progetto.configuration.EnsureClienteExistsFilter;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 
-// Aggiungi questo Bean o modifica quello esistente
-@Bean
-public Converter<Jwt, AbstractAuthenticationToken> customJwtConverter() {
-    return new CustomJwtConverter();
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
+public class SecurityConfig {
+
+    @Bean
+    public Converter<Jwt, AbstractAuthenticationToken> customJwtConverter() {
+        return new CustomJwtConverter();
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http, EnsureClienteExistsFilter ensureClienteExistsFilter) throws Exception {
+        http
+            .cors(Customizer.withDefaults())
+            .csrf(AbstractHttpConfigurer::disable)
+            .authorizeHttpRequests(authorize -> authorize
+                .requestMatchers(
+                        "/clienti/registrazione",
+                        "/prodotto",
+                        "/prodotto/**"
+                ).permitAll()
+                .anyRequest().authenticated()
+            )
+            .oauth2ResourceServer(oauth2 -> oauth2
+                .jwt(jwt -> jwt.jwtAuthenticationConverter(customJwtConverter()))
+            );
+
+        http.addFilterAfter(ensureClienteExistsFilter, AnonymousAuthenticationFilter.class);
+        
+        return http.build();
+    }
 }
-
-        @Bean
-        public SecurityFilterChain filterChain(HttpSecurity http, EnsureClienteExistsFilter ensureClienteExistsFilter) throws Exception {
-            http
-                    // ... (resto della config)
-                    .oauth2ResourceServer(oauth2 -> oauth2
-                            .jwt(jwt -> jwt.jwtAuthenticationConverter(customJwtConverter())) // Usa il tuo converter custom
-                    );
-            http.addFilterAfter(ensureClienteExistsFilter, org.springframework.security.web.authentication.AnonymousAuthenticationFilter.class);
-            return http.build();
-        }

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface ProdottoRepository extends JpaRepository<Prodotto,Integer> {
+public interface ProdottoRepository extends JpaRepository<Prodotto,Long> {
     List<Prodotto> findByMarca(String marca);
 
     Page<Prodotto> findByMarca(String marca, Pageable pageable);
