@@ -7,51 +7,40 @@ import { Order } from '../../models/order.model';
   selector: 'app-order-list',
   standalone: true,
   imports: [CommonModule],
-  template: `
-    <div class="container mt-4">
-      <h2>I Miei Ordini</h2>
-      @for (order of orders; track order.idOrdine) {
-        <div class="card mb-3">
-          <div class="card-header d-flex justify-content-between">
-            <span>Ordine #{{ order.idOrdine }} - {{ order.data | date:'short' }}</span>
-            <span class="badge bg-info text-dark">{{ order.stato }}</span>
-          </div>
-          <div class="card-body">
-            <ul>
-              @for (item of order.oggetti; track item.idOggetto) {
-                <li>{{ item.nome }} - {{ item.quantita }}x {{ item.prezzo | currency:'EUR' }}</li>
-              }
-            </ul>
-            <p class="fw-bold">Totale: {{ order.totaleOrdine | currency:'EUR' }}</p>
-
-            @if (order.stato !== 'ANNULLATO' && order.stato !== 'SPEDITO') {
-              <button class="btn btn-danger btn-sm" (click)="cancel(order.idOrdine)">Annulla Ordine</button>
-            }
-          </div>
-        </div>
-      }
-      @if (orders.length === 0) { <p>Nessun ordine effettuato.</p> }
-    </div>
-  `
+  templateUrl: './order-list.component.html'
 })
 export class OrderListComponent implements OnInit {
   orders: Order[] = [];
+  loading = true;
 
   constructor(private orderService: OrderService) {}
 
   ngOnInit() {
-    this.orderService.getMyOrders().subscribe(data => this.orders = data);
+    this.loadOrders();
+  }
+
+  loadOrders() {
+    this.orderService.getMyOrders().subscribe({
+      next: (data) => {
+        this.orders = data;
+        this.loading = false;
+      },
+      error: (err) => {
+        console.error(err);
+        this.loading = false;
+      }
+    });
   }
 
   cancel(id: number) {
-    const motivo = prompt("Inserisci motivo annullamento:");
+    const motivo = prompt("Inserisci il motivo dell'annullamento:");
     if (motivo) {
       this.orderService.cancelOrder(id, motivo).subscribe({
         next: () => {
-          alert('Ordine annullato');
-          this.ngOnInit(); // Ricarica lista
+          alert('Ordine annullato con successo.');
+          this.loadOrders(); // Ricarica la lista per vedere lo stato aggiornato
         },
-        error: (err) => alert('Errore: ' + err.error?.message)
+        error: (err) => alert('Errore: ' + (err.error?.message || err.message))
       });
     }
   }

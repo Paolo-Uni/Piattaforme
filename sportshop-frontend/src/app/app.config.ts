@@ -1,4 +1,4 @@
-import { ApplicationConfig, provideZoneChangeDetection, APP_INITIALIZER, Provider } from '@angular/core';
+import { ApplicationConfig, provideZoneChangeDetection, APP_INITIALIZER, Provider, provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { provideHttpClient, withInterceptors, withInterceptorsFromDi, HTTP_INTERCEPTORS } from '@angular/common/http';
@@ -40,6 +40,7 @@ const BearerInterceptorProvider: Provider = {
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    provideZonelessChangeDetection(),
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
     // Importante: withInterceptorsFromDi serve per far funzionare KeycloakBearerInterceptor (che è basato su classi)

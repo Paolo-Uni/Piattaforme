@@ -1,0 +1,28 @@
+<div class="container mt-4">
+  <h2>Il tuo Carrello</h2>
+  <div *ngIf="cartItems.length === 0" class="alert alert-info">Carrello vuoto.</div>
+
+  <div *ngIf="cartItems.length > 0">
+    <table class="table align-middle">
+      <thead><tr><th>Prodotto</th><th>Prezzo</th><th>Quantità</th><th>Totale</th></tr></thead>
+      <tbody>
+      <tr *ngFor="let item of cartItems">
+        <td>{{ item.nomeProdotto }} <br><small class="text-muted">{{ item.taglia }}, {{ item.colore }}</small></td>
+        <td>{{ item.prezzoUnitario | currency:'EUR' }}</td>
+        <td>
+          <button class="btn btn-sm btn-outline-secondary" (click)="updateQty(item, -1)">-</button>
+          <span class="mx-2">{{ item.quantita }}</span>
+          <button class="btn btn-sm btn-outline-secondary" (click)="updateQty(item, 1)">+</button>
+        </td>
+        <td class="fw-bold">{{ item.prezzoUnitario * item.quantita | currency:'EUR' }}</td>
+      </tr>
+      </tbody>
+    </table>
+
+    <div class="card p-3 bg-light mt-3">
+      <h4>Spedizione</h4>
+      <input type="text" class="form-control mb-3" placeholder="Indirizzo completo..." [(ngModel)]="address">
+      <button class="btn btn-success btn-lg" [disabled]="!address" (click)="checkout()">Ordina Ora</button>
+    </div>
+  </div>
+</div>

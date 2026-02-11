@@ -1,0 +1,59 @@
+<div class="container mt-4">
+  <h2 class="mb-4">I Miei Ordini</h2>
+
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+  </div>
+
+  <div *ngIf="!loading && orders.length === 0" class="alert alert-info text-center">
+    <h4>Nessun ordine trovato</h4>
+    <p>Non hai ancora effettuato acquisti.</p>
+  </div>
+
+  <div *ngIf="!loading && orders.length > 0">
+    <div class="card mb-3 shadow-sm border" *ngFor="let order of orders">
+
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <div>
+          <strong>Ordine #{{ order.idOrdine }}</strong>
+          <span class="text-muted ms-2 small">{{ order.data | date:'medium' }}</span>
+        </div>
+        <div>
+          <span class="badge rounded-pill"
+                [ngClass]="{
+                  'bg-warning text-dark': order.stato === 'IN_ATTESA_DI_PAGAMENTO',
+                  'bg-success': order.stato === 'PAGAMENTO_COMPLETATO',
+                  'bg-info text-dark': order.stato === 'SPEDITO' || order.stato === 'IN_PREPARAZIONE',
+                  'bg-danger': order.stato === 'ANNULLATO' || order.stato === 'PAGAMENTO_FALLITO',
+                  'bg-primary': order.stato === 'CONSEGNATO'
+                }">
+            {{ order.stato }}
+          </span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <ul class="list-group list-group-flush mb-3">
+          <li class="list-group-item d-flex justify-content-between align-items-center px-0" *ngFor="let item of order.oggetti">
+            <div>
+              <span class="fw-bold">{{ item.nome }}</span>
+              <br>
+              <small class="text-muted">Taglia: {{ item.taglia }} | Colore: {{ item.colore }}</small>
+            </div>
+            <span>{{ item.quantita }} x {{ item.prezzo | currency:'EUR' }}</span>
+          </li>
+        </ul>
+
+        <div class="d-flex justify-content-between align-items-center border-top pt-3">
+          <h5 class="mb-0">Totale: <span class="text-primary">{{ order.totaleOrdine | currency:'EUR' }}</span></h5>
+
+          <button class="btn btn-outline-danger btn-sm"
+                  *ngIf="order.stato !== 'ANNULLATO' && order.stato !== 'SPEDITO' && order.stato !== 'CONSEGNATO' && order.stato !== 'PAGAMENTO_FALLITO'"
+                  (click)="cancel(order.idOrdine)">
+            Annulla Ordine
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

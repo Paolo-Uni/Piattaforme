@@ -1,0 +1,31 @@
+<div class="container mt-5" *ngIf="product; else loading">
+  <button class="btn btn-link mb-3" routerLink="/products">&larr; Torna al catalogo</button>
+  <div class="card shadow-lg">
+    <div class="row g-0">
+      <div class="col-md-5 bg-light d-flex align-items-center justify-content-center">
+        <i class="bi bi-image text-secondary" style="font-size: 5rem;"></i>
+      </div>
+      <div class="col-md-7">
+        <div class="card-body p-5">
+          <small class="text-uppercase text-muted">{{ product.categoria }} - {{ product.marca }}</small>
+          <h1 class="fw-bold mt-2">{{ product.nome }}</h1>
+          <h2 class="text-primary my-3">{{ product.prezzo | currency:'EUR' }}</h2>
+          <p class="lead">{{ product.descrizione }}</p>
+
+          <dl class="row mt-4">
+            <dt class="col-sm-3">Taglia</dt><dd class="col-sm-9">{{ product.taglia }}</dd>
+            <dt class="col-sm-3">Colore</dt><dd class="col-sm-9">{{ product.colore }}</dd>
+            <dt class="col-sm-3">Stock</dt><dd class="col-sm-9">{{ product.stock }} pezzi</dd>
+          </dl>
+
+          <button class="btn btn-success btn-lg w-100 mt-3"
+                  [disabled]="product.stock <= 0"
+                  (click)="addToCart()">
+            {{ product.stock > 0 ? 'Aggiungi al Carrello' : 'Non Disponibile' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<ng-template #loading><p class="text-center mt-5">Caricamento...</p></ng-template>

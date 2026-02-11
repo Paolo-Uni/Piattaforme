@@ -1,0 +1,25 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4 shadow-sm">
+  <a class="navbar-brand fw-bold" routerLink="/">
+    <i class="bi bi-basket2-fill me-2"></i>SportShop
+  </a>
+  <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  <div class="collapse navbar-collapse" id="navbarNav">
+    <ul class="navbar-nav me-auto">
+      <li class="nav-item"><a class="nav-link" routerLink="/products">Prodotti</a></li>
+      <li class="nav-item" *ngIf="loggedIn"><a class="nav-link" routerLink="/cart">Carrello</a></li>
+      <li class="nav-item" *ngIf="loggedIn"><a class="nav-link" routerLink="/orders">Ordini</a></li>
+      <li class="nav-item" *ngIf="loggedIn && isAdmin"><a class="nav-link text-warning" routerLink="/admin">Admin</a></li>
+    </ul>
+
+    <div class="d-flex align-items-center gap-3">
+      <div *ngIf="loggedIn" class="text-light">
+        <small>Ciao, {{ username }}</small>
+      </div>
+      <button *ngIf="!loggedIn" class="btn btn-primary btn-sm" (click)="login()">Accedi</button>
+      <button *ngIf="loggedIn" class="btn btn-outline-danger btn-sm" (click)="logout()">Esci</button>
+    </div>
+  </div>
+</nav>
