@@ -36,12 +36,9 @@ public class ProdottoService {
         return prodotti.hasContent() ? prodotti.getContent() : new ArrayList<>();
     }
 
-    /**
-     * Ricerca Dinamica Multicriterio PAGINATA:
-     * Restituisce una Page<Prodotto> invece di una List per efficienza.
-     */
     @Transactional(readOnly = true)
     public Page<Prodotto> ricercaDinamica(String nome, String marca, String categoria, String colore, String taglia, Pageable pageable) {
+        // Nota: "_" è valido in Java 21+ con --enable-preview abilitato nel pom.xml
         return prodottoRepository.findAll((Specification<Prodotto>) (root, _, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -62,7 +59,7 @@ public class ProdottoService {
             }
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
-        }, pageable); // Passiamo il pageable al repository
+        }, pageable);
     }
 
     @Transactional
@@ -116,4 +113,10 @@ public class ProdottoService {
         prodottoRepository.save(prodotto);
     }
 
+    // RIAGGIUNTO: Metodo utile per dettaglio prodotto o controlli futuri
+    @Transactional(readOnly = true)
+    public Prodotto getProdottoById(Long id) {
+        return prodottoRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato con ID: " + id));
+    }
 }

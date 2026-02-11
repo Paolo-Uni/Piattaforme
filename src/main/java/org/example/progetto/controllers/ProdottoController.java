@@ -57,9 +57,18 @@ public class ProdottoController {
         }
     }
 
-    /**
-     * Ricerca dinamica multicriterio PAGINATA
-     */
+    // NUOVO METODO AGGIUNTO: Riduzione manuale stock (Admin)
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/remove-stock")
+    public ResponseEntity<?> diminuisciQuantitaProdotto(@RequestParam Long idProdotto, @RequestParam Integer quantita) {
+        try {
+            prodottoService.diminuisciQuantitaProdotto(idProdotto, quantita);
+            return ResponseEntity.ok(new ResponseMessage("Stock ridotto con successo"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ResponseMessage(e.getMessage()));
+        }
+    }
+
     @GetMapping("/search")
     public ResponseEntity<Page<Prodotto>> ricercaDinamica(
             @RequestParam(required = false) String nome,
