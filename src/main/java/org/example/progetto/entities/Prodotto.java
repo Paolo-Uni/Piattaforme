@@ -1,10 +1,8 @@
 package org.example.progetto.entities;
 
 import jakarta.persistence.*;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.ToString;
 
 import java.math.BigDecimal;
 
@@ -12,7 +10,7 @@ import java.math.BigDecimal;
 @Table(name = "prodotto", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"nome", "categoria", "marca", "colore", "taglia"})
 })
-@Getter @Setter @ToString @EqualsAndHashCode
+@Getter @Setter
 public class Prodotto {
 
     @Id

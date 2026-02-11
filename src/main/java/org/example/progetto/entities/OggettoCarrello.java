@@ -1,16 +1,14 @@
 package org.example.progetto.entities;
 
 import jakarta.persistence.*;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.ToString;
 
 @Entity
 @Table(name = "oggetto_carrello", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"prodotto", "carrello"})
 })
-@Getter @Setter @ToString @EqualsAndHashCode
+@Getter @Setter
 public class OggettoCarrello {
 
     @Id
@@ -28,5 +26,4 @@ public class OggettoCarrello {
     @ManyToOne
     @JoinColumn(name = "carrello", nullable = false)
     private Carrello carrello;
-
 }

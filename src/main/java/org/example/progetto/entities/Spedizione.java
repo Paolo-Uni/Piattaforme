@@ -1,16 +1,14 @@
 package org.example.progetto.entities;
 
 import jakarta.persistence.*;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.ToString;
 
 import java.time.Instant;
 
 @Entity
 @Table(name = "spedizione")
-@Getter @Setter @ToString @EqualsAndHashCode
+@Getter @Setter
 public class Spedizione {
 
     @Id

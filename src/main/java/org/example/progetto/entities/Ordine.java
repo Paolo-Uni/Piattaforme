@@ -1,10 +1,9 @@
 package org.example.progetto.entities;
 
 import jakarta.persistence.*;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.ToString;
+import org.example.progetto.support.StatoOrdine;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -13,7 +12,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "ordine")
-@Getter @Setter @ToString @EqualsAndHashCode
+@Getter @Setter
 public class Ordine {
 
     @Id
@@ -31,16 +30,20 @@ public class Ordine {
     @Column(name = "totale", nullable = false)
     private BigDecimal totale = BigDecimal.ZERO;
 
-    @OneToOne(mappedBy = "ordine")
+    @OneToOne(mappedBy = "ordine", cascade = CascadeType.ALL)
     private Spedizione spedizione;
 
+    @Enumerated(EnumType.STRING)
     @Column(name="stato", nullable = false)
-    private String stato;
+    private StatoOrdine stato;
 
-    @OneToOne(mappedBy = "ordine")
+    // Aggiunto per salvare motivazioni annullamento o errori rimborso
+    @Column(name = "note")
+    private String note;
+
+    @OneToOne(mappedBy = "ordine", cascade = CascadeType.ALL)
     private Transazione transazione;
 
-    @OneToMany(mappedBy = "ordine",cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "ordine", cascade = CascadeType.ALL)
     private List<OggettoOrdine> oggetti = new ArrayList<>();
-
 }

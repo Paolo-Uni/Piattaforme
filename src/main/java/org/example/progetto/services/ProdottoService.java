@@ -37,12 +37,12 @@ public class ProdottoService {
     }
 
     /**
-     * Ricerca Dinamica Multicriterio:
-     * Permette di filtrare i prodotti combinando opzionalmente nome, marca, categoria, colore e taglia.
+     * Ricerca Dinamica Multicriterio PAGINATA:
+     * Restituisce una Page<Prodotto> invece di una List per efficienza.
      */
     @Transactional(readOnly = true)
-    public List<Prodotto> ricercaDinamica(String nome, String marca, String categoria, String colore, String taglia) {
-        return prodottoRepository.findAll((Specification<Prodotto>) (root, query, criteriaBuilder) -> {
+    public Page<Prodotto> ricercaDinamica(String nome, String marca, String categoria, String colore, String taglia, Pageable pageable) {
+        return prodottoRepository.findAll((Specification<Prodotto>) (root, _, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
             if (nome != null && !nome.isEmpty()) {
@@ -62,17 +62,15 @@ public class ProdottoService {
             }
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
-        });
+        }, pageable); // Passiamo il pageable al repository
     }
 
     @Transactional
     public void aggiungiProdotto(Prodotto prodotto) throws ProductAlreadyExistsException {
-        // Verifica esistenza tramite ID se fornito
         if (prodotto.getId() != null && prodottoRepository.existsById(prodotto.getId())) {
             throw new ProductAlreadyExistsException("Prodotto già esistente con ID: " + prodotto.getId());
         }
         
-        // Validazione stock iniziale
         if (prodotto.getStock() == null || prodotto.getStock() < 0) {
             throw new InvalidQuantityException("La quantità inserita non è valida");
         }
@@ -118,9 +116,4 @@ public class ProdottoService {
         prodottoRepository.save(prodotto);
     }
 
-    @Transactional(readOnly = true)
-    public Prodotto getProdottoById(Long id) {
-        return prodottoRepository.findById(id)
-                .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
-    }
 }

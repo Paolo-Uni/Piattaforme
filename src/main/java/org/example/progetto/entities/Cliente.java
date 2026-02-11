@@ -1,17 +1,15 @@
 package org.example.progetto.entities;
 
 import jakarta.persistence.*;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.ToString;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "cliente")
-@Getter @Setter @EqualsAndHashCode @ToString
+@Getter @Setter
 public class Cliente {
 
     @Id
@@ -28,7 +26,7 @@ public class Cliente {
     @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    @Column(name = "telefono", nullable = false, unique = true)
+    @Column(name = "telefono", unique = true)
     private String telefono;
 
     @Column(name="indirizzo")
@@ -36,5 +34,4 @@ public class Cliente {
 
     @OneToMany(mappedBy = "cliente")
     private List<Ordine> ordini = new ArrayList<>();
-
 }

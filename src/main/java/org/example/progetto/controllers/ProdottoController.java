@@ -6,6 +6,10 @@ import org.example.progetto.exceptions.ProductNotFoundException;
 import org.example.progetto.services.ProdottoService;
 import org.example.progetto.support.ResponseMessage;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -32,7 +36,7 @@ public class ProdottoController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/delete") // Corretto typo "delate"
+    @DeleteMapping("/delete")
     public ResponseEntity<?> cancellaProdotto(@RequestParam Long idProdotto) {
         try {
             prodottoService.cancellaProdotto(idProdotto);
@@ -54,20 +58,22 @@ public class ProdottoController {
     }
 
     /**
-     * NUOVO: Ricerca dinamica multicriterio
+     * Ricerca dinamica multicriterio PAGINATA
      */
     @GetMapping("/search")
-    public ResponseEntity<?> ricercaDinamica(
+    public ResponseEntity<Page<Prodotto>> ricercaDinamica(
             @RequestParam(required = false) String nome,
             @RequestParam(required = false) String marca,
             @RequestParam(required = false) String categoria,
             @RequestParam(required = false) String colore,
-            @RequestParam(required = false) String taglia) {
+            @RequestParam(required = false) String taglia,
+            @RequestParam(defaultValue = "0") int pageNumber,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(defaultValue = "id") String sortBy
+    ) {
+        Pageable paging = PageRequest.of(pageNumber, pageSize, Sort.by(sortBy));
+        Page<Prodotto> result = prodottoService.ricercaDinamica(nome, marca, categoria, colore, taglia, paging);
         
-        List<Prodotto> result = prodottoService.ricercaDinamica(nome, marca, categoria, colore, taglia);
-        if (result.isEmpty()) {
-            return ResponseEntity.ok(new ResponseMessage("Nessun risultato trovato"));
-        }
         return ResponseEntity.ok(result);
     }
 

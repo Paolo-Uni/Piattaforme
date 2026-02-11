@@ -6,6 +6,7 @@ import org.example.progetto.dto.OggettoCarrelloDTO;
 import org.example.progetto.entities.*;
 import org.example.progetto.exceptions.*;
 import org.example.progetto.repositories.*;
+import org.example.progetto.support.StatoOrdine;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,20 +33,20 @@ public class CarrelloService {
     private static final Random RANDOM = new Random();
 
     @Transactional
-    public void aggiungiAlCarrello(String email, Long idProdotto, int quantita) throws ClienteNotFoundException, ProductNotFoundException, InvalidQuantityException {
-        Cliente cliente = clienteRepository.findByEmail(email).get();
-        if (cliente == null) throw new ClienteNotFoundException("Cliente non trovato!");
+    public void aggiungiAlCarrello(String email, Long idProdotto, int quantita) {
+        Cliente cliente = clienteRepository.findByEmail(email)
+                .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato!"));
 
-        // Recupero o creazione carrello (Gestione Optional se aggiornato il repo)
-        Carrello carrello = carrelloRepository.findByCliente(cliente).get();
-        if (carrello == null) {
-            carrello = new Carrello();
-            carrello.setCliente(cliente);
-            carrello.setTotaleCarrello(BigDecimal.ZERO);
-            carrello = carrelloRepository.save(carrello);
-        } else {
-            entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
-        }
+        Carrello carrello = carrelloRepository.findByCliente(cliente)
+                .orElseGet(() -> {
+                    Carrello c = new Carrello();
+                    c.setCliente(cliente);
+                    c.setTotaleCarrello(BigDecimal.ZERO);
+                    return carrelloRepository.save(c);
+                });
+        
+        entityManager.refresh(carrello); 
+        entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
 
         Prodotto prod = prodottoRepository.findById(idProdotto)
                 .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
@@ -74,14 +75,17 @@ public class CarrelloService {
 
     @Transactional
     public void incrementaQuantitaOggettoCarrello(String email, Long idProdotto) {
-        Cliente cliente = clienteRepository.findByEmail(email).get();
-        if (cliente == null) throw new ClienteNotFoundException("Cliente non trovato!");
+        Cliente cliente = clienteRepository.findByEmail(email)
+                .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato!"));
 
-        Carrello carrello = carrelloRepository.findByCliente(cliente).get();
-        if (carrello == null) throw new InvalidCartOperationException("Carrello non trovato.");
+        Carrello carrello = carrelloRepository.findByCliente(cliente)
+                .orElseThrow(() -> new InvalidCartOperationException("Carrello non trovato."));
+        
         entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
 
-        Prodotto prod = prodottoRepository.findById(idProdotto).orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
+        Prodotto prod = prodottoRepository.findById(idProdotto)
+                .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
+                
         OggettoCarrello oggetto = oggettoCarrelloRepository.findByCarrelloAndProdotto(carrello, prod);
         if (oggetto == null) throw new ProductNotFoundException("Prodotto non nel carrello.");
         
@@ -95,14 +99,17 @@ public class CarrelloService {
 
     @Transactional
     public void decrementaQuantitaOggettoCarrello(String email, Long idProdotto) {
-        Cliente cliente = clienteRepository.findByEmail(email).get();
-        if (cliente == null) throw new ClienteNotFoundException("Cliente non trovato!");
+        Cliente cliente = clienteRepository.findByEmail(email)
+                .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato!"));
 
-        Carrello carrello = carrelloRepository.findByCliente(cliente).get();
-        if (carrello == null) throw new InvalidCartOperationException("Carrello non trovato.");
+        Carrello carrello = carrelloRepository.findByCliente(cliente)
+                .orElseThrow(() -> new InvalidCartOperationException("Carrello non trovato."));
+        
         entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
 
-        Prodotto prodotto = prodottoRepository.findById(idProdotto).orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
+        Prodotto prodotto = prodottoRepository.findById(idProdotto)
+                .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
+                
         OggettoCarrello oggetto = oggettoCarrelloRepository.findByCarrelloAndProdotto(carrello, prodotto);
         if (oggetto == null) throw new InvalidCartOperationException("Prodotto non nel carrello.");
         
@@ -117,27 +124,11 @@ public class CarrelloService {
     }
 
     @Transactional
-    public void rimuoviDalCarrello(String email, Long prodottoID) {
-        Cliente cliente = clienteRepository.findByEmail(email).get();
-        if (cliente == null) throw new ClienteNotFoundException("Cliente non trovato!");
-
-        Carrello carrello = carrelloRepository.findByCliente(cliente).get();
-        if (carrello == null) throw new InvalidCartOperationException("Carrello non trovato.");
-        
-        Prodotto prodotto = prodottoRepository.findById(prodottoID).orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
-        OggettoCarrello oggetto = oggettoCarrelloRepository.findByCarrelloAndProdotto(carrello, prodotto);
-        if (oggetto == null) throw new InvalidCartOperationException("Prodotto non nel carrello.");
-        
-        oggettoCarrelloRepository.delete(oggetto);
-        aggiornaTotaleCarrello(carrello);
-    }
-
-    @Transactional
     public void svuotaCarrello(String email) {
-        Cliente cliente = clienteRepository.findByEmail(email).get();
-        if (cliente == null) throw new ClienteNotFoundException("Cliente non trovato!");
+        Cliente cliente = clienteRepository.findByEmail(email)
+                .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato!"));
 
-        Carrello carrello = carrelloRepository.findByCliente(cliente).get();
+        Carrello carrello = carrelloRepository.findByCliente(cliente).orElse(null);
         if (carrello != null) {
             oggettoCarrelloRepository.deleteAllByCarrello(carrello);
             carrello.setTotaleCarrello(BigDecimal.ZERO);
@@ -147,7 +138,7 @@ public class CarrelloService {
 
     @Transactional
     public void aggiornaTotaleCarrello(Carrello carrello) {
-        Set<OggettoCarrello> oggetti = oggettoCarrelloRepository.findByCarrello(carrello);
+        Set<OggettoCarrello> oggetti = new HashSet<>(oggettoCarrelloRepository.findByCarrello(carrello));
         BigDecimal totale = BigDecimal.ZERO;
         for (OggettoCarrello oc : oggetti) {
             BigDecimal riga = oc.getProdotto().getPrezzo().multiply(BigDecimal.valueOf(oc.getQuantita()));
@@ -159,17 +150,17 @@ public class CarrelloService {
 
     @Transactional
     public void ordina(String email, String indirizzoSpedizione) {
-        Cliente cliente = clienteRepository.findByEmail(email).get();
-        if (cliente == null) throw new ClienteNotFoundException("Cliente non trovato!");
+        Cliente cliente = clienteRepository.findByEmail(email)
+                .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato!"));
 
-        Carrello carrello = carrelloRepository.findByCliente(cliente).get();
-        if (carrello == null) throw new InvalidCartOperationException("Carrello non trovato.");
+        Carrello carrello = carrelloRepository.findByCliente(cliente)
+                .orElseThrow(() -> new InvalidCartOperationException("Carrello non trovato."));
+        
         entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
 
         Set<OggettoCarrello> prodottiCarrello = oggettoCarrelloRepository.findByCarrello(carrello);
         if (prodottiCarrello.isEmpty()) throw new InvalidCartOperationException("Carrello vuoto.");
 
-        // Validazione Stock e Lock
         for (OggettoCarrello oc : prodottiCarrello) {
             Prodotto p = oc.getProdotto();
             entityManager.lock(p, LockModeType.PESSIMISTIC_WRITE);
@@ -183,7 +174,8 @@ public class CarrelloService {
         Ordine ordine = new Ordine();
         ordine.setCliente(cliente);
         ordine.setDataOrdine(LocalDateTime.now());
-        ordine.setStato("In attesa di pagamento");
+        // UPDATE: Uso Enum
+        ordine.setStato(StatoOrdine.IN_ATTESA_DI_PAGAMENTO);
         ordine.setTotale(totaleOrdine);
         ordine = ordineRepository.save(ordine);
 
@@ -194,9 +186,11 @@ public class CarrelloService {
 
         if (processaPagamento(totaleOrdine)) {
             transazione.setEsito(true);
-            ordine.setStato("Pagamento completato");
+            transazioneRepository.save(transazione);
             
-            // Trasferimento oggetti da Carrello a Ordine
+            // UPDATE: Uso Enum
+            ordine.setStato(StatoOrdine.PAGAMENTO_COMPLETATO);
+            
             for (OggettoCarrello oc : prodottiCarrello) {
                 OggettoOrdine oo = new OggettoOrdine();
                 oo.setNomeProdotto(oc.getProdotto().getNome());
@@ -212,28 +206,19 @@ public class CarrelloService {
             spedizione.setOrdine(ordine);
             spedizione.setIndirizzoSpedizione(indirizzoSpedizione);
             spedizione.setDataPrevista(Instant.now().plus(7, ChronoUnit.DAYS));
-            spedizione.setStato("In preparazione");
+            spedizione.setStato("In preparazione"); // Spedizione ha ancora stato String, ok.
             spedizioneRepository.save(spedizione);
+            ordine.setSpedizione(spedizione);
 
-            // Svuoto il carrello dopo il successo
+            ordineRepository.save(ordine);
+
             oggettoCarrelloRepository.deleteAllByCarrello(carrello);
             carrello.setTotaleCarrello(BigDecimal.ZERO);
             carrelloRepository.save(carrello);
         } else {
-            transazione.setEsito(false);
-            ordine.setStato("Pagamento fallito");
-            // Ricarico stock (Rollback manuale stock)
-            for (OggettoCarrello oc : prodottiCarrello) {
-                Prodotto p = oc.getProdotto();
-                p.setStock(p.getStock() + oc.getQuantita());
-                prodottoRepository.save(p);
-            }
-            transazioneRepository.save(transazione);
-            ordineRepository.save(ordine);
+            // Pagamento fallito -> Rollback automatico
             throw new PaymentException("Il pagamento è stato rifiutato.");
         }
-        transazioneRepository.save(transazione);
-        ordineRepository.save(ordine);
     }
 
     private boolean processaPagamento(BigDecimal amount) {
@@ -242,9 +227,10 @@ public class CarrelloService {
 
     @Transactional(readOnly = true)
     public List<OggettoCarrelloDTO> getCartItemsByEmail(String email) {
-        Cliente cliente = clienteRepository.findByEmail(email).get();
-        if (cliente == null) throw new ClienteNotFoundException("Cliente non trovato!");
-        Carrello carrello = carrelloRepository.findByCliente(cliente).get();
+        Cliente cliente = clienteRepository.findByEmail(email)
+                .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato!"));
+        
+        Carrello carrello = carrelloRepository.findByCliente(cliente).orElse(null);
         if (carrello == null) return new ArrayList<>();
 
         Set<OggettoCarrello> oggetti = oggettoCarrelloRepository.findByCarrello(carrello);
@@ -252,6 +238,10 @@ public class CarrelloService {
         for (OggettoCarrello oc : oggetti) {
             OggettoCarrelloDTO dto = new OggettoCarrelloDTO();
             dto.setIdProdotto(oc.getProdotto().getId());
+            dto.setNomeProdotto(oc.getProdotto().getNome());
+            dto.setPrezzoUnitario(oc.getProdotto().getPrezzo());
+            dto.setColore(oc.getProdotto().getColore());
+            dto.setTaglia(oc.getProdotto().getTaglia());
             dto.setQuantita(oc.getQuantita());
             dtos.add(dto);
         }

@@ -10,6 +10,7 @@ import org.example.progetto.exceptions.InvalidOperationException;
 import org.example.progetto.repositories.ClienteRepository;
 import org.example.progetto.repositories.OggettoOrdineRepository;
 import org.example.progetto.repositories.OrdineRepository;
+import org.example.progetto.support.StatoOrdine;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,45 +38,44 @@ public class OrdineService {
     private OggettoOrdineRepository oggettoOrdineRepository;
 
     @Transactional
-    public void annullaOrdine(Cliente c, Ordine o, String motivo) {
-        // Verifica esistenza e applica Lock PESSIMISTIC_WRITE per evitare race conditions
-        if(!clienteRepository.existsById(c.getId()))
-            throw new ClienteNotFoundException("Cliente non trovato");
+    public void annullaOrdine(Cliente cDetached, Ordine oDetached, String motivo) {
+        Cliente c = clienteRepository.findById(cDetached.getId())
+                .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato"));
+        
         entityManager.lock(c, LockModeType.PESSIMISTIC_WRITE);
 
-        if(!ordineRepository.existsById(o.getId()))
-            throw new InvalidOperationException("Ordine non trovato");
+        Ordine o = ordineRepository.findById(oDetached.getId())
+                .orElseThrow(() -> new InvalidOperationException("Ordine non trovato"));
+        
         entityManager.lock(o, LockModeType.PESSIMISTIC_WRITE);
 
-        // Controllo appartenenza ordine
-        if (!(o.getCliente().getId().equals(c.getId()))) {
-            throw new InvalidOperationException("L'ordine non appartiene all'utente.");
+        if (!o.getCliente().getId().equals(c.getId())) {
+            throw new InvalidOperationException("L'ordine non appartiene all'utente specificato.");
         }
 
-        // Controllo stato ordine: non si può annullare un ordine già spedito o annullato
-        if (o.getStato().contains("Annullato") || o.getStato().contains("Spedito")) {
-            throw new InvalidOperationException("Impossibile annullare l'ordine nello stato attuale: " + o.getStato());
+        // UPDATE: Controllo tramite Enum
+        StatoOrdine statoAttuale = o.getStato();
+        if (statoAttuale == StatoOrdine.ANNULLATO || statoAttuale == StatoOrdine.SPEDITO) {
+            throw new InvalidOperationException("Impossibile annullare l'ordine nello stato attuale: " + statoAttuale);
         }
 
-        // Gestione Spedizione
         Spedizione sped = o.getSpedizione();
         if (sped != null) {
             entityManager.lock(sped, LockModeType.PESSIMISTIC_WRITE);
             sped.setStato("Annullata a seguito di cancellazione ordine");
         }
 
-        // Aggiornamento stato ordine
-        o.setStato("Annullato. Motivo: " + motivo);
+        // UPDATE: Setto stato Enum e salvo il motivo nelle note
+        o.setStato(StatoOrdine.ANNULLATO);
+        o.setNote("Motivo annullamento: " + motivo);
         ordineRepository.save(o);
 
-        // Gestione Rimborso: Logica separata per non invalidare l'annullamento se il gateway fallisce
         try {
             processaRimborso(o);
         } catch (Exception e) {
-            // Se il rimborso fallisce, logghiamo l'errore ma l'ordine resta annullato.
-            // Lo stato viene aggiornato per indicare che il rimborso deve essere gestito manualmente.
             System.err.println("Fallimento rimborso per ordine " + o.getId() + ": " + e.getMessage());
-            o.setStato(o.getStato() + " (Rimborso in sospeso)");
+            // UPDATE: Aggiorno le note per segnalare l'errore
+            o.setNote(o.getNote() + " | ERRORE: Rimborso FALLITO, contattare assistenza.");
             ordineRepository.save(o);
         }
     }
@@ -97,7 +97,6 @@ public class OrdineService {
 
     private void simulaRimborso(BigDecimal importo) {
         System.out.println("Richiesta rimborso inviata al gateway. Importo: " + importo);
-        // Probabilità di successo del 90%
         boolean rimborsoSuccesso = RANDOM.nextInt(100) < 90;
 
         if (rimborsoSuccesso) {
@@ -109,10 +108,8 @@ public class OrdineService {
 
     @Transactional(readOnly = true)
     public List<OrdineDTO> getOrdiniByEmail(String email) {
-        Cliente cliente = clienteRepository.findByEmail(email).get();
-        if (cliente == null) {
-            throw new ClienteNotFoundException("Cliente non trovato con email: " + email);
-        }
+        Cliente cliente = clienteRepository.findByEmail(email)
+                .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato con email: " + email));
 
         List<Ordine> ordini = ordineRepository.findByCliente(cliente);
         List<OrdineDTO> ordiniDTO = new ArrayList<>();
@@ -121,8 +118,9 @@ public class OrdineService {
             OrdineDTO dto = new OrdineDTO();
             dto.setIdOrdine(ordine.getId());
             dto.setData(ordine.getDataOrdine());
-            dto.setStato(ordine.getStato());
-            dto.setTotaleOrdine(ordine.getTotale()); // Correzione: impostazione del totale nel DTO
+            // UPDATE: Converto l'Enum in Stringa per il DTO
+            dto.setStato(ordine.getStato().toString()); 
+            dto.setTotaleOrdine(ordine.getTotale());
 
             List<OggettoOrdine> prodottiOrdinati = oggettoOrdineRepository.findByOrdine(ordine);
             List<OggettoOrdineDTO> prodottiDTO = new ArrayList<>();
@@ -131,6 +129,8 @@ public class OrdineService {
                 OggettoOrdineDTO oggettoDTO = new OggettoOrdineDTO();
                 oggettoDTO.setIdOggetto(po.getId());
                 oggettoDTO.setNome(po.getNomeProdotto());
+                oggettoDTO.setTaglia(po.getTaglia());
+                oggettoDTO.setColore(po.getColore());
                 oggettoDTO.setPrezzo(po.getPrezzo());
                 oggettoDTO.setQuantita(po.getQuantita());
                 prodottiDTO.add(oggettoDTO);
@@ -142,7 +142,9 @@ public class OrdineService {
         return ordiniDTO;
     }
 
+    @Transactional(readOnly = true)
     public Ordine getOrdineById(Long idOrdine) {
-        return ordineRepository.findById(idOrdine).get();
+        return ordineRepository.findById(idOrdine)
+                .orElseThrow(() -> new InvalidOperationException("Ordine non trovato con ID: " + idOrdine));
     }
 }

@@ -22,9 +22,13 @@ public class ClienteService {
 
     @Transactional(propagation = Propagation.REQUIRED)
     public ClienteDTO registraCliente(Request req) throws CredentialsAlredyExistException {
-        // Correzione: Controllo separato o in OR per email e telefono dato che sono entrambi unici
-        if (clienteRepository.existsByEmail(req.getEmail()) || req.getTelefono() != null) {
-            throw new CredentialsAlredyExistException("L'email o il numero di telefono sono già registrati");
+        // CORREZIONE: Controlliamo se l'email esiste OPPURE se il telefono è fornito ED esiste già
+        if (clienteRepository.existsByEmail(req.getEmail())) {
+             throw new CredentialsAlredyExistException("L'email è già registrata");
+        }
+        
+        if (req.getTelefono() != null && clienteRepository.findByTelefono(req.getTelefono()).isPresent()) {
+            throw new CredentialsAlredyExistException("Il numero di telefono è già registrato");
         }
 
         Cliente cliente = new Cliente();
@@ -50,7 +54,6 @@ public class ClienteService {
 
     @Transactional(readOnly = true)
     public ClienteDTO getCliente(Long id) {
-        // Utilizzo di Optional (se il repository è stato aggiornato) o gestione sicura
         return clienteRepository.findById(id)
                 .map(this::toDTO)
                 .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato con id: " + id));
@@ -90,13 +93,14 @@ public class ClienteService {
 
     @Transactional(readOnly = true)
     public Cliente getClienteByEmail(String email) {
-        return clienteRepository.findByEmail(email).get();
+        return clienteRepository.findByEmail(email)
+                .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato con email: " + email));
     }
 
     @Transactional(readOnly = true)
     public Cliente getClienteByTelefono(String telefono) {
-        // Correzione: Nome del parametro corretto (era email)
-        return clienteRepository.findByTelefono(telefono).get();
+        return clienteRepository.findByTelefono(telefono)
+                .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato con telefono: " + telefono));
     }
 
     @Transactional

@@ -1,10 +1,8 @@
 package org.example.progetto.entities;
 
 import jakarta.persistence.*;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.ToString;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -12,7 +10,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "carrello")
-@Getter @Setter @EqualsAndHashCode @ToString
+@Getter @Setter
 public class Carrello {
 
     @Id
@@ -27,7 +25,6 @@ public class Carrello {
     @Column(name = "totale_carrello", precision = 10, scale = 2)
     private BigDecimal totaleCarrello = BigDecimal.ZERO;
 
-    @OneToMany(mappedBy = "carrello", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "carrello", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OggettoCarrello> oggetti = new ArrayList<>();
-
 }
