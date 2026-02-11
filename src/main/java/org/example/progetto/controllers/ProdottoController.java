@@ -22,7 +22,7 @@ public class ProdottoController {
     @Autowired
     private ProdottoService prodottoService;
 
-    @PreAuthorize("hasRole('admin')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/create")
     public ResponseEntity<?> aggiungiProdotto(@RequestBody Prodotto prod) {
         try {
@@ -37,11 +37,11 @@ public class ProdottoController {
         }
     }
 
-    @PreAuthorize("hasRole('admin')")
-    @PostMapping("/delate")
-    public ResponseEntity<?> cancellaProdotto(@RequestBody Prodotto prod) {
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/delate")
+    public ResponseEntity<?> cancellaProdotto(@RequestParam Long idProdotto) {
         try {
-            prodottoService.cancellaProdotto(prod);
+            prodottoService.cancellaProdotto(idProdotto);
             Map<String, String> response = new HashMap<>();
             response.put("message", "Prodotto cancellato con successo");
             return ResponseEntity.ok(response);
@@ -52,9 +52,9 @@ public class ProdottoController {
         }
     }
 
-    @PreAuthorize("hasRole('admin')")
-    @PostMapping("/add")
-    public ResponseEntity<?> aumentaQuantitaProdotto(@RequestBody Long idProdotto, @RequestParam Integer quantita) {
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/add")
+    public ResponseEntity<?> aumentaQuantitaProdotto(@RequestParam Long idProdotto, @RequestParam Integer quantita) {
         try {
             prodottoService.aumentaQuantitaProdotto(idProdotto, quantita);
             Map<String, String> response = new HashMap<>();
@@ -67,9 +67,9 @@ public class ProdottoController {
         }
     }
 
-    @PreAuthorize("hasRole('admin')")
-    @PostMapping("/decrease")
-    public ResponseEntity<?> diminuisciQuantitaProdotto(@RequestBody Long idProdotto, @RequestParam Integer quantita) {
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/decrease")
+    public ResponseEntity<?> diminuisciQuantitaProdotto(@RequestParam Long idProdotto, @RequestParam Integer quantita) {
         try {
             prodottoService.diminuisciQuantitaProdotto(idProdotto, quantita);
             Map<String, String> response = new HashMap<>();

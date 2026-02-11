@@ -29,5 +29,5 @@ public interface ProdottoRepository extends JpaRepository<Prodotto,Integer> {
 
     Page<Prodotto> findByNome(String nome, Pageable pageable);
 
-    Prodotto findById(Long id);
+    boolean existsById(Long id);
 }

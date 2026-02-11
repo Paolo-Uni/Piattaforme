@@ -38,7 +38,7 @@ public class ClienteController {
         }
     }
 
-    @PreAuthorize(value="hasRole('admin')")
+    @PreAuthorize(value="hasRole('ADMIN')")
     @GetMapping(value="/search/{id}")
     public @ResponseBody ResponseEntity<ClienteDTO> readById(@PathVariable Long id) throws ClienteNotFoundException {
         ClienteDTO cliente = clienteService.getCliente(id);
@@ -46,25 +46,25 @@ public class ClienteController {
         return ResponseEntity.ok(cliente);
     }
 
-    @PreAuthorize(value="hasRole('admin')")
+    @PreAuthorize(value="hasRole('ADMIN')")
     @GetMapping(value="/search/by_name/{name}")
     public @ResponseBody List<ClienteDTO> readByName(@PathVariable String name) {
         return clienteService.getClientiByNome(name);
     }
 
-    @PreAuthorize(value="hasRole('admin')")
+    @PreAuthorize(value="hasRole('ADMIN')")
     @GetMapping(value="/search/by_surname/{surname}")
     public @ResponseBody List<ClienteDTO> readBySurname(@PathVariable String surname) {
         return clienteService.getClientiByCognome(surname);
     }
 
-    @PreAuthorize(value="hasRole('admin')")
+    @PreAuthorize(value="hasRole('ADMIN')")
     @GetMapping(value="/search/by_name_surname/{name}/{surname}")
     public @ResponseBody List<ClienteDTO> readByNameSurname(@PathVariable String name, @PathVariable String surname) {
         return clienteService.getClientiByNomeAndCognome(name,surname);
     }
 
-    @PreAuthorize(value="hasRole('admin')")
+    @PreAuthorize(value="hasRole('ADMIN')")
     @GetMapping("search/by_email")
     public ResponseEntity<?> getClienteByEmail(@RequestParam String email) {
         Cliente cliente = clienteService.getClienteByEmail(email);
@@ -74,7 +74,7 @@ public class ClienteController {
         return ResponseEntity.ok(clienteService.toDTO(cliente));
     }
 
-    @PreAuthorize(value="hasRole('admin')")
+    @PreAuthorize(value="hasRole('ADMIN')")
     @GetMapping("search/by_telefono")
     public ResponseEntity<?> getClienteByPhone(@RequestParam String telefono) {
         Cliente cliente = clienteService.getClienteByTelefono(telefono);
@@ -84,7 +84,7 @@ public class ClienteController {
         return ResponseEntity.ok(clienteService.toDTO(cliente));
     }
 
-    @PreAuthorize("hasRole('admin')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/all")
     public List<ClienteDTO> getTuttiClienti() {
         return clienteService.getAllClienti();
@@ -123,7 +123,7 @@ public class ClienteController {
         }
     }
 
-    @PreAuthorize("hasRole('admin')")
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminaCliente(@PathVariable Long id) {
         try {

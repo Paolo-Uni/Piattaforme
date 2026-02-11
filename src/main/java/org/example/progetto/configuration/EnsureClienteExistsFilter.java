@@ -30,11 +30,14 @@ public class EnsureClienteExistsFilter extends OncePerRequestFilter {
                 && authentication.isAuthenticated()
                 && authentication.getPrincipal() instanceof Jwt jwt){
             String email = jwt.getClaimAsString("email");
+            // Controllo se l'email esiste, altrimenti creo l'utente
             if (!clienteRepository.existsByEmail(email)) {
                 Cliente nuovo = new Cliente();
                 nuovo.setNome(jwt.getClaimAsString("given_name"));
                 nuovo.setCognome(jwt.getClaimAsString("family_name"));
                 nuovo.setEmail(email);
+                // Imposta un valore di default per i campi obbligatori se necessario
+                nuovo.setTelefono("0000000000"); 
                 clienteRepository.save(nuovo);
             }
         }
@@ -42,4 +45,3 @@ public class EnsureClienteExistsFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 }
-

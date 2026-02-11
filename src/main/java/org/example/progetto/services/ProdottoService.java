@@ -113,7 +113,7 @@ public class ProdottoService {
 
     @Transactional
     public void aggiungiProdotto(Prodotto prodotto) throws ProductAlreadyExistsException {
-        if(prodotto.getId() != 0 && prodottoRepository.existsById(Math.toIntExact(prodotto.getId())))
+        if(prodotto.getId() != null && prodottoRepository.existsById((prodotto.getId())))
             throw new ProductAlreadyExistsException("Prodotto già esistente");
         if(prodotto.getStock() <= 0)
             throw new InvalidQuantityException("La quantità inserita del prodotto non è valida");
@@ -121,16 +121,16 @@ public class ProdottoService {
     }
 
     @Transactional
-    public void cancellaProdotto(Prodotto prodotto) {
-        if(prodotto.getId() != 0 && prodottoRepository.existsById(Math.toIntExact(prodotto.getId())))
-            prodottoRepository.delete(prodotto);
+    public void cancellaProdotto(Long idProdotto) {
+        if(idProdotto != 0 && prodottoRepository.existsById(idProdotto))
+            prodottoRepository.delete(prodottoRepository.findById(idProdotto));
         else
             throw new ProductNotFoundException("Prodotto non trovato");
     }
 
     @Transactional
     public void aumentaQuantitaProdotto(Long id, int quantita){
-        if(!prodottoRepository.existsById(Math.toIntExact(id)))
+        if(!prodottoRepository.existsById(id))
             throw new ProductNotFoundException("Prodotto non trovato");
         Prodotto prodotto = prodottoRepository.findById(id);
         prodotto.setStock(prodotto.getStock()+quantita);
@@ -139,7 +139,7 @@ public class ProdottoService {
 
     @Transactional
     public void diminuisciQuantitaProdotto(Long id, int quantita){
-        if(!prodottoRepository.existsById(Math.toIntExact(id)))
+        if(!prodottoRepository.existsById(id))
             throw new ProductNotFoundException("Prodotto non trovato");
         Prodotto prodotto = prodottoRepository.findById(id);
         if(prodotto.getStock()-quantita<0)
