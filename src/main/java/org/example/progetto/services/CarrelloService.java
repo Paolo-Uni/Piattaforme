@@ -47,7 +47,7 @@ public class CarrelloService {
             entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
         }
 
-        // FIX: Uso findById invece di findAll + stream (molto più veloce)
+        // FIX: Trova direttamente il prodotto invece di scaricarli tutti (stream rimosso)
         Prodotto prod = prodottoRepository.findById(idProdotto)
                 .orElseThrow(() -> new ProductNotFoundException("Prodotto con ID " + idProdotto + " non trovato"));
 
@@ -83,7 +83,6 @@ public class CarrelloService {
         if (carrello == null) throw new InvalidCartOperationException("Carrello non trovato.");
         entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
 
-        // FIX: Recupero Prodotto correttamente
         Prodotto prod = prodottoRepository.findById(idProdotto)
                  .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
 
@@ -107,7 +106,6 @@ public class CarrelloService {
         if (carrello == null) throw new InvalidCartOperationException("Carrello non trovato.");
         entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
 
-        // FIX: Gestione Optional
         Prodotto prodotto = prodottoRepository.findById(prodottoID)
                 .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
                 
@@ -150,8 +148,6 @@ public class CarrelloService {
         Carrello carrello = carrelloRepository.findByCliente(cliente);
         if (carrello != null) {
             entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
-            // FIX: Potenziale ConcurrentModificationException evitata usando deleteInBatch o query diretta, 
-            // ma deleteAllByCarrello va bene se implementato nel repository.
             oggettoCarrelloRepository.deleteAllByCarrello(carrello);
         }
     }
@@ -177,11 +173,8 @@ public class CarrelloService {
 
         for (OggettoCarrello oggetto : oggetti) {
             entityManager.lock(oggetto, LockModeType.PESSIMISTIC_WRITE);
-            
-            // FIX: findById e Optional
             Prodotto prodotto = prodottoRepository.findById(oggetto.getProdotto().getId())
                     .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
-            
             entityManager.lock(prodotto, LockModeType.PESSIMISTIC_WRITE);
 
             if (prodotto.getStock() < oggetto.getQuantita()) {
@@ -191,7 +184,6 @@ public class CarrelloService {
             prodottoRepository.save(prodotto);
         }
 
-        // Creazione Ordine
         Ordine ordine = new Ordine();
         ordine.setCliente(cliente);
         ordine.setDataOrdine(LocalDateTime.now());
@@ -215,8 +207,6 @@ public class CarrelloService {
         if (esitoPagamento) {
             transazione.setEsito(true);
             ordine.setStato("Pagamento completato");
-            
-            // Svuota carrello manuale (perché siamo nella stessa transazione)
             oggettoCarrelloRepository.deleteAllByCarrello(carrello);
 
             for (OggettoCarrello oc : oggetti) {
@@ -228,7 +218,6 @@ public class CarrelloService {
                 oo.setPrezzo(oc.getProdotto().getPrezzo());
                 oo.setQuantita(oc.getQuantita());
                 oo.setOrdine(ordine);
-                // ordine.getOggetti().add(oo); // Non necessario se salvi oo e hai cascade, ma ok
                 oggettoOrdineRepository.save(oo);
             }
             ordine.setTotale(importo);
@@ -237,7 +226,6 @@ public class CarrelloService {
             transazione.setEsito(false);
             ordine.setStato("Pagamento fallito");
             
-            // Rollback stock
             for (OggettoCarrello oc : oggetti) {
                 Prodotto prodotto = prodottoRepository.findById(oc.getProdotto().getId()).get();
                 entityManager.lock(prodotto, LockModeType.PESSIMISTIC_WRITE);
@@ -245,7 +233,6 @@ public class CarrelloService {
                 prodottoRepository.save(prodotto);
             }
             
-            // Salviamo comunque la transazione fallita? Sì, ma lanciamo eccezione per notificare il controller
             transazioneRepository.save(transazione);
             ordineRepository.save(ordine);
             throw new PaymentException("Pagamento fallito.");

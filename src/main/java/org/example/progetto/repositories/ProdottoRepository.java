@@ -8,26 +8,20 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface ProdottoRepository extends JpaRepository<Prodotto,Long> {
+// FIX: Cambiato Integer -> Long per corrispondere all'entità Prodotto
+public interface ProdottoRepository extends JpaRepository<Prodotto, Long> {
     List<Prodotto> findByMarca(String marca);
-
     Page<Prodotto> findByMarca(String marca, Pageable pageable);
 
     List<Prodotto> findByCategoria(String categoria);
-
     Page<Prodotto> findByCategoria(String categoria, Pageable paging);
 
     List<Prodotto> findByColore(String colore);
-
     Page<Prodotto> findByColore(String colore, Pageable paging);
 
     List<Prodotto> findByTaglia(String taglia);
-
     Page<Prodotto> findByTaglia(String taglia, Pageable paging);
 
     List<Prodotto> findByNome(String nome);
-
     Page<Prodotto> findByNome(String nome, Pageable pageable);
-
-    boolean existsById(Long id);
 }
