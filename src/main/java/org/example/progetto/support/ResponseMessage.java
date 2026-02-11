@@ -1,4 +1,7 @@
 package org.example.progetto.support;
 
-public record ResponseMessage(String message){}
-
+/**
+ * Record utilizzato per inviare risposte JSON standardizzate
+ * (es. Messaggi di errore o conferme di successo).
+ */
+public record ResponseMessage(String message) { }

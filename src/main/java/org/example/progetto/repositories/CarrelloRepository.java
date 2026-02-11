@@ -5,7 +5,9 @@ import org.example.progetto.entities.Cliente;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface CarrelloRepository extends JpaRepository<Carrello,Long> {
-    Carrello findByCliente(Cliente cliente);
+    Optional<Carrello> findByCliente(Cliente cliente);
 }

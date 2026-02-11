@@ -12,7 +12,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -27,7 +27,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, EnsureClienteExistsFilter ensureClienteExistsFilter) throws Exception {
         http
-            .cors(Customizer.withDefaults())
+            .cors(Customizer.withDefaults()) // Utilizza la configurazione definita in CorsConfig o WebConfig
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(
@@ -41,7 +41,8 @@ public class SecurityConfig {
                 .jwt(jwt -> jwt.jwtAuthenticationConverter(customJwtConverter()))
             );
 
-        http.addFilterAfter(ensureClienteExistsFilter, AnonymousAuthenticationFilter.class);
+        // Il filtro deve essere eseguito DOPO l'autenticazione JWT per avere l'email dell'utente
+        http.addFilterAfter(ensureClienteExistsFilter, UsernamePasswordAuthenticationFilter.class);
         
         return http.build();
     }

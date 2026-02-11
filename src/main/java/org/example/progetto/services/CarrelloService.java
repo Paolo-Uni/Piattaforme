@@ -31,25 +31,24 @@ public class CarrelloService {
     
     private static final Random RANDOM = new Random();
 
-    // FIX: cambiato idProdotto da int a Long
     @Transactional
     public void aggiungiAlCarrello(String email, Long idProdotto, int quantita) throws ClienteNotFoundException, ProductNotFoundException, InvalidQuantityException {
-
-        Cliente cliente = clienteRepository.findByEmail(email);
+        Cliente cliente = clienteRepository.findByEmail(email).get();
         if (cliente == null) throw new ClienteNotFoundException("Cliente non trovato!");
 
-        Carrello carrello = carrelloRepository.findByCliente((cliente));
+        // Recupero o creazione carrello (Gestione Optional se aggiornato il repo)
+        Carrello carrello = carrelloRepository.findByCliente(cliente).get();
         if (carrello == null) {
             carrello = new Carrello();
             carrello.setCliente(cliente);
+            carrello.setTotaleCarrello(BigDecimal.ZERO);
             carrello = carrelloRepository.save(carrello);
         } else {
             entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
         }
 
-        // FIX: Trova direttamente il prodotto invece di scaricarli tutti (stream rimosso)
         Prodotto prod = prodottoRepository.findById(idProdotto)
-                .orElseThrow(() -> new ProductNotFoundException("Prodotto con ID " + idProdotto + " non trovato"));
+                .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
 
         if (quantita > prod.getStock()) {
             throw new InvalidQuantityException("Quantità non disponibile");
@@ -59,12 +58,9 @@ public class CarrelloService {
         if (oggetto != null) {
             entityManager.lock(oggetto, LockModeType.PESSIMISTIC_WRITE);
             int nuovaQuantita = oggetto.getQuantita() + quantita;
-            if (nuovaQuantita <= prod.getStock()) {
-                oggetto.setQuantita(nuovaQuantita);
-                oggettoCarrelloRepository.save(oggetto);
-            } else {
-                throw new InvalidQuantityException("Quantità totale superiore alla disponibilità");
-            }
+            if (nuovaQuantita > prod.getStock()) throw new InvalidQuantityException("Quantità totale superiore alla disponibilità");
+            oggetto.setQuantita(nuovaQuantita);
+            oggettoCarrelloRepository.save(oggetto);
         } else {
             OggettoCarrello aggiunta = new OggettoCarrello();
             aggiunta.setProdotto(prod);
@@ -72,197 +68,183 @@ public class CarrelloService {
             aggiunta.setCarrello(carrello);
             oggettoCarrelloRepository.save(aggiunta);
         }
+
+        aggiornaTotaleCarrello(carrello);
     }
 
     @Transactional
-    public void incrementaQuantitaOggettoCarrello(String email, Long idProdotto) throws ClienteNotFoundException, ProductNotFoundException, InvalidQuantityException {
-        Cliente cliente = clienteRepository.findByEmail(email);
+    public void incrementaQuantitaOggettoCarrello(String email, Long idProdotto) {
+        Cliente cliente = clienteRepository.findByEmail(email).get();
         if (cliente == null) throw new ClienteNotFoundException("Cliente non trovato!");
 
-        Carrello carrello = carrelloRepository.findByCliente(cliente);
+        Carrello carrello = carrelloRepository.findByCliente(cliente).get();
         if (carrello == null) throw new InvalidCartOperationException("Carrello non trovato.");
         entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
 
-        Prodotto prod = prodottoRepository.findById(idProdotto)
-                 .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
-
+        Prodotto prod = prodottoRepository.findById(idProdotto).orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
         OggettoCarrello oggetto = oggettoCarrelloRepository.findByCarrelloAndProdotto(carrello, prod);
         if (oggetto == null) throw new ProductNotFoundException("Prodotto non nel carrello.");
+        
         entityManager.lock(oggetto, LockModeType.PESSIMISTIC_WRITE);
-
-        if (oggetto.getQuantita() + 1 > prod.getStock()) {
-            throw new InvalidQuantityException("Quantità non disponibile");
-        }
+        if (oggetto.getQuantita() + 1 > prod.getStock()) throw new InvalidQuantityException("Quantità non disponibile");
+        
         oggetto.setQuantita(oggetto.getQuantita() + 1);
         oggettoCarrelloRepository.save(oggetto);
+        aggiornaTotaleCarrello(carrello);
     }
 
     @Transactional
-    public void rimuoviDalCarrello(String email, Long prodottoID) throws ClienteNotFoundException, InvalidCartOperationException {
-        Cliente cliente = clienteRepository.findByEmail(email);
+    public void decrementaQuantitaOggettoCarrello(String email, Long idProdotto) {
+        Cliente cliente = clienteRepository.findByEmail(email).get();
         if (cliente == null) throw new ClienteNotFoundException("Cliente non trovato!");
 
-        Carrello carrello = carrelloRepository.findByCliente(cliente);
+        Carrello carrello = carrelloRepository.findByCliente(cliente).get();
         if (carrello == null) throw new InvalidCartOperationException("Carrello non trovato.");
         entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
 
-        Prodotto prodotto = prodottoRepository.findById(prodottoID)
-                .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
-                
+        Prodotto prodotto = prodottoRepository.findById(idProdotto).orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
         OggettoCarrello oggetto = oggettoCarrelloRepository.findByCarrelloAndProdotto(carrello, prodotto);
         if (oggetto == null) throw new InvalidCartOperationException("Prodotto non nel carrello.");
         
         entityManager.lock(oggetto, LockModeType.PESSIMISTIC_WRITE);
-        oggettoCarrelloRepository.delete(oggetto);
-    }
-
-    @Transactional
-    public void decrementaQuantitaOggettoCarrello(String email, Long idProdotto) throws ClienteNotFoundException, InvalidCartOperationException {
-        Cliente cliente = clienteRepository.findByEmail(email);
-        if (cliente == null) throw new ClienteNotFoundException("Cliente non trovato!");
-
-        Carrello carrello = carrelloRepository.findByCliente(cliente);
-        if (carrello == null) throw new InvalidCartOperationException("Carrello non trovato.");
-        entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
-
-        Prodotto prodotto = prodottoRepository.findById(idProdotto)
-                .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
-
-        OggettoCarrello oggetto = oggettoCarrelloRepository.findByCarrelloAndProdotto(carrello, prodotto);
-        if (oggetto == null) throw new InvalidCartOperationException("Prodotto non nel carrello.");
-        entityManager.lock(oggetto, LockModeType.PESSIMISTIC_WRITE);
-
         if (oggetto.getQuantita() > 1) {
             oggetto.setQuantita(oggetto.getQuantita() - 1);
             oggettoCarrelloRepository.save(oggetto);
         } else {
             oggettoCarrelloRepository.delete(oggetto);
         }
+        aggiornaTotaleCarrello(carrello);
     }
 
     @Transactional
-    public void svuotaCarrello(String email) throws ClienteNotFoundException {
-        Cliente cliente = clienteRepository.findByEmail(email);
+    public void rimuoviDalCarrello(String email, Long prodottoID) {
+        Cliente cliente = clienteRepository.findByEmail(email).get();
         if (cliente == null) throw new ClienteNotFoundException("Cliente non trovato!");
 
-        Carrello carrello = carrelloRepository.findByCliente(cliente);
+        Carrello carrello = carrelloRepository.findByCliente(cliente).get();
+        if (carrello == null) throw new InvalidCartOperationException("Carrello non trovato.");
+        
+        Prodotto prodotto = prodottoRepository.findById(prodottoID).orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
+        OggettoCarrello oggetto = oggettoCarrelloRepository.findByCarrelloAndProdotto(carrello, prodotto);
+        if (oggetto == null) throw new InvalidCartOperationException("Prodotto non nel carrello.");
+        
+        oggettoCarrelloRepository.delete(oggetto);
+        aggiornaTotaleCarrello(carrello);
+    }
+
+    @Transactional
+    public void svuotaCarrello(String email) {
+        Cliente cliente = clienteRepository.findByEmail(email).get();
+        if (cliente == null) throw new ClienteNotFoundException("Cliente non trovato!");
+
+        Carrello carrello = carrelloRepository.findByCliente(cliente).get();
         if (carrello != null) {
-            entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
             oggettoCarrelloRepository.deleteAllByCarrello(carrello);
+            carrello.setTotaleCarrello(BigDecimal.ZERO);
+            carrelloRepository.save(carrello);
         }
     }
 
     @Transactional
-    public void ordina(String email, String indirizzoSpedizione)
-            throws ClienteNotFoundException, InvalidCartOperationException, InvalidQuantityException {
+    public void aggiornaTotaleCarrello(Carrello carrello) {
+        Set<OggettoCarrello> oggetti = oggettoCarrelloRepository.findByCarrello(carrello);
+        BigDecimal totale = BigDecimal.ZERO;
+        for (OggettoCarrello oc : oggetti) {
+            BigDecimal riga = oc.getProdotto().getPrezzo().multiply(BigDecimal.valueOf(oc.getQuantita()));
+            totale = totale.add(riga);
+        }
+        carrello.setTotaleCarrello(totale);
+        carrelloRepository.save(carrello);
+    }
 
-        Cliente cliente = clienteRepository.findByEmail(email);
+    @Transactional
+    public void ordina(String email, String indirizzoSpedizione) {
+        Cliente cliente = clienteRepository.findByEmail(email).get();
         if (cliente == null) throw new ClienteNotFoundException("Cliente non trovato!");
 
-        Carrello carrello = carrelloRepository.findByCliente(cliente);
+        Carrello carrello = carrelloRepository.findByCliente(cliente).get();
         if (carrello == null) throw new InvalidCartOperationException("Carrello non trovato.");
         entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
 
-        Set<OggettoCarrello> prodottiCliente = oggettoCarrelloRepository.findByCarrello(carrello);
-        if (prodottiCliente.isEmpty()) {
-            throw new InvalidCartOperationException("Carrello vuoto.");
+        Set<OggettoCarrello> prodottiCarrello = oggettoCarrelloRepository.findByCarrello(carrello);
+        if (prodottiCarrello.isEmpty()) throw new InvalidCartOperationException("Carrello vuoto.");
+
+        // Validazione Stock e Lock
+        for (OggettoCarrello oc : prodottiCarrello) {
+            Prodotto p = oc.getProdotto();
+            entityManager.lock(p, LockModeType.PESSIMISTIC_WRITE);
+            if (p.getStock() < oc.getQuantita()) throw new InvalidQuantityException("Stock insufficiente per: " + p.getNome());
+            p.setStock(p.getStock() - oc.getQuantita());
+            prodottoRepository.save(p);
         }
 
-        List<OggettoCarrello> oggetti = new ArrayList<>(prodottiCliente);
-        oggetti.sort(Comparator.comparingLong(OggettoCarrello::getId));
-
-        for (OggettoCarrello oggetto : oggetti) {
-            entityManager.lock(oggetto, LockModeType.PESSIMISTIC_WRITE);
-            Prodotto prodotto = prodottoRepository.findById(oggetto.getProdotto().getId())
-                    .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
-            entityManager.lock(prodotto, LockModeType.PESSIMISTIC_WRITE);
-
-            if (prodotto.getStock() < oggetto.getQuantita()) {
-                throw new InvalidQuantityException("Quantità non sufficiente per: " + prodotto.getNome());
-            }
-            prodotto.setStock(prodotto.getStock() - oggetto.getQuantita());
-            prodottoRepository.save(prodotto);
-        }
+        BigDecimal totaleOrdine = carrello.getTotaleCarrello();
 
         Ordine ordine = new Ordine();
         ordine.setCliente(cliente);
         ordine.setDataOrdine(LocalDateTime.now());
-        ordine.setStato("Elaborazione...");
-        ordineRepository.save(ordine);
+        ordine.setStato("In attesa di pagamento");
+        ordine.setTotale(totaleOrdine);
+        ordine = ordineRepository.save(ordine);
 
         Transazione transazione = new Transazione();
         transazione.setOrdine(ordine);
         transazione.setData(Instant.now());
-        BigDecimal importo = calcolaImporto(prodottiCliente);
-        transazione.setImporto(importo);
+        transazione.setImporto(totaleOrdine);
 
-        Spedizione spedizione = new Spedizione();
-        spedizione.setOrdine(ordine);
-        spedizione.setIndirizzoSpedizione(indirizzoSpedizione);
-        spedizione.setDataPrevista(Instant.now().plus(7, ChronoUnit.DAYS));
-        spedizione.setStato("In corso...");
-
-        boolean esitoPagamento = processaPagamento(transazione.getImporto());
-
-        if (esitoPagamento) {
+        if (processaPagamento(totaleOrdine)) {
             transazione.setEsito(true);
             ordine.setStato("Pagamento completato");
-            oggettoCarrelloRepository.deleteAllByCarrello(carrello);
-
-            for (OggettoCarrello oc : oggetti) {
+            
+            // Trasferimento oggetti da Carrello a Ordine
+            for (OggettoCarrello oc : prodottiCarrello) {
                 OggettoOrdine oo = new OggettoOrdine();
                 oo.setNomeProdotto(oc.getProdotto().getNome());
                 oo.setTaglia(oc.getProdotto().getTaglia());
                 oo.setColore(oc.getProdotto().getColore());
-                oo.setDescrizione(oc.getProdotto().getDescrizione());
                 oo.setPrezzo(oc.getProdotto().getPrezzo());
                 oo.setQuantita(oc.getQuantita());
                 oo.setOrdine(ordine);
                 oggettoOrdineRepository.save(oo);
             }
-            ordine.setTotale(importo);
 
+            Spedizione spedizione = new Spedizione();
+            spedizione.setOrdine(ordine);
+            spedizione.setIndirizzoSpedizione(indirizzoSpedizione);
+            spedizione.setDataPrevista(Instant.now().plus(7, ChronoUnit.DAYS));
+            spedizione.setStato("In preparazione");
+            spedizioneRepository.save(spedizione);
+
+            // Svuoto il carrello dopo il successo
+            oggettoCarrelloRepository.deleteAllByCarrello(carrello);
+            carrello.setTotaleCarrello(BigDecimal.ZERO);
+            carrelloRepository.save(carrello);
         } else {
             transazione.setEsito(false);
             ordine.setStato("Pagamento fallito");
-            
-            for (OggettoCarrello oc : oggetti) {
-                Prodotto prodotto = prodottoRepository.findById(oc.getProdotto().getId()).get();
-                entityManager.lock(prodotto, LockModeType.PESSIMISTIC_WRITE);
-                prodotto.setStock(prodotto.getStock() + oc.getQuantita());
-                prodottoRepository.save(prodotto);
+            // Ricarico stock (Rollback manuale stock)
+            for (OggettoCarrello oc : prodottiCarrello) {
+                Prodotto p = oc.getProdotto();
+                p.setStock(p.getStock() + oc.getQuantita());
+                prodottoRepository.save(p);
             }
-            
             transazioneRepository.save(transazione);
             ordineRepository.save(ordine);
-            throw new PaymentException("Pagamento fallito.");
+            throw new PaymentException("Il pagamento è stato rifiutato.");
         }
-
         transazioneRepository.save(transazione);
-        spedizioneRepository.save(spedizione);
         ordineRepository.save(ordine);
     }
 
-    private static BigDecimal calcolaImporto(Set<OggettoCarrello> prodottiUser) {
-        BigDecimal totale = BigDecimal.ZERO;
-        if (prodottiUser == null) return totale;
-        for (OggettoCarrello oggetto : prodottiUser) {
-            totale = totale.add(oggetto.getProdotto().getPrezzo().multiply(BigDecimal.valueOf(oggetto.getQuantita())));
-        }
-        return totale;
-    }
-
     private boolean processaPagamento(BigDecimal amount) {
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) return false;
-        return RANDOM.nextInt(100) < 80;
+        return amount.compareTo(BigDecimal.ZERO) > 0 && RANDOM.nextInt(100) < 80;
     }
 
     @Transactional(readOnly = true)
-    public List<OggettoCarrelloDTO> getCartItemsByEmail(String email) throws ClienteNotFoundException {
-        Cliente cliente = clienteRepository.findByEmail(email);
+    public List<OggettoCarrelloDTO> getCartItemsByEmail(String email) {
+        Cliente cliente = clienteRepository.findByEmail(email).get();
         if (cliente == null) throw new ClienteNotFoundException("Cliente non trovato!");
-
-        Carrello carrello = carrelloRepository.findByCliente(cliente);
+        Carrello carrello = carrelloRepository.findByCliente(cliente).get();
         if (carrello == null) return new ArrayList<>();
 
         Set<OggettoCarrello> oggetti = oggettoCarrelloRepository.findByCarrello(carrello);

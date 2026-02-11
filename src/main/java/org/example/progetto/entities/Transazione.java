@@ -20,7 +20,7 @@ public class Transazione {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_ordine", insertable = false, updatable = false)
+    @JoinColumn(name = "id_ordine")
     private Ordine ordine;
 
     @Column(name = "data", nullable = false)

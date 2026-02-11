@@ -22,19 +22,23 @@ public class ClienteService {
 
     @Transactional(propagation = Propagation.REQUIRED)
     public ClienteDTO registraCliente(Request req) throws CredentialsAlredyExistException {
-        if (clienteRepository.existsByEmailAndTelefono(req.getEmail(), req.getTelefono())) {
-            throw new CredentialsAlredyExistException("L'utente è già registrato");
+        // Correzione: Controllo separato o in OR per email e telefono dato che sono entrambi unici
+        if (clienteRepository.existsByEmail(req.getEmail()) || req.getTelefono() != null) {
+            throw new CredentialsAlredyExistException("L'email o il numero di telefono sono già registrati");
         }
+
         Cliente cliente = new Cliente();
         cliente.setNome(req.getNome());
-        cliente.setEmail(req.getEmail());
         cliente.setCognome(req.getCognome());
+        cliente.setEmail(req.getEmail());
+        cliente.setTelefono(req.getTelefono());
+        
         Cliente salvato = clienteRepository.save(cliente);
         return toDTO(salvato);
     }
 
     public ClienteDTO toDTO(Cliente cliente) {
-        return new ClienteDTO(cliente.getId(), cliente.getNome(), cliente.getEmail(), cliente.getTelefono());
+        return new ClienteDTO(cliente.getId(), cliente.getNome(), cliente.getCognome(), cliente.getEmail(), cliente.getTelefono());
     }
 
     @Transactional(readOnly = true)
@@ -46,9 +50,10 @@ public class ClienteService {
 
     @Transactional(readOnly = true)
     public ClienteDTO getCliente(Long id) {
-        Cliente cliente =  clienteRepository.findById(id)
+        // Utilizzo di Optional (se il repository è stato aggiornato) o gestione sicura
+        return clienteRepository.findById(id)
+                .map(this::toDTO)
                 .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato con id: " + id));
-        return toDTO(cliente);
     }
 
     @Transactional(readOnly = true)
@@ -69,7 +74,7 @@ public class ClienteService {
 
     @Transactional(readOnly = true)
     public List<ClienteDTO> getClientiByNomeAndCognome(String nome, String cognome) {
-        return clienteRepository.findByNomeAndCognome(nome,cognome)
+        return clienteRepository.findByNomeAndCognome(nome, cognome)
                 .stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
@@ -85,18 +90,17 @@ public class ClienteService {
 
     @Transactional(readOnly = true)
     public Cliente getClienteByEmail(String email) {
-        return clienteRepository.findByEmail(email);
+        return clienteRepository.findByEmail(email).get();
     }
 
     @Transactional(readOnly = true)
-    public Cliente getClienteByTelefono(String email) {
-        return clienteRepository.findByTelefono(email);
+    public Cliente getClienteByTelefono(String telefono) {
+        // Correzione: Nome del parametro corretto (era email)
+        return clienteRepository.findByTelefono(telefono).get();
     }
 
     @Transactional
-    public void saveCliente(Cliente c){
+    public void saveCliente(Cliente c) {
         clienteRepository.save(c);
     }
-
-
 }

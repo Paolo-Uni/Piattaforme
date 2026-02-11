@@ -25,10 +25,10 @@ public class Cliente {
     @Column(name = "cognome", nullable = false)
     private String cognome;
 
-    @Column(name = "email", nullable = false)
+    @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    @Column(name = "telefono", nullable = false)
+    @Column(name = "telefono", nullable = false, unique = true)
     private String telefono;
 
     @Column(name="indirizzo")

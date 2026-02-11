@@ -28,6 +28,6 @@ public class Spedizione {
     private String stato;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_ordine", insertable = false, updatable = false)
+    @JoinColumn(name = "id_ordine")
     private Ordine ordine;
 }

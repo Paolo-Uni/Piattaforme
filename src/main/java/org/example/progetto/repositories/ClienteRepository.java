@@ -5,11 +5,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ClienteRepository extends JpaRepository<Cliente,Long> {
-
-    boolean existsByEmailAndTelefono(String email, String telefono);
 
     List<Cliente> findByNome(String nome);
 
@@ -17,9 +16,9 @@ public interface ClienteRepository extends JpaRepository<Cliente,Long> {
 
     List<Cliente> findByNomeAndCognome(String nome, String cognome);
 
-    Cliente findByEmail(String email);
+    Optional<Cliente> findByEmail(String email);
 
-    Cliente findByTelefono(String email);
+    Optional<Cliente> findByTelefono(String telefono);
 
     boolean existsByEmail(String email);
 }

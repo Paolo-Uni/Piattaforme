@@ -22,7 +22,7 @@ public class Ordine {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "cliente_cliente_id")
+    @JoinColumn(name = "cliente")
     private Cliente cliente;
 
     @Column(name = "data_ordine", nullable = false)

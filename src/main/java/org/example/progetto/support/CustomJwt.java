@@ -13,14 +13,11 @@ import java.util.Collection;
 public class CustomJwt extends JwtAuthenticationToken {
 
     private String firstname;
-
     private String lastname;
+    private String email; // Aggiunto per facilitare l'accesso nei Controller
 
     public CustomJwt(Jwt jwt, Collection<? extends GrantedAuthority> authorities) {
         super(jwt, authorities);
+        this.email = jwt.getClaimAsString("email");
     }
-
 }
-
-
-

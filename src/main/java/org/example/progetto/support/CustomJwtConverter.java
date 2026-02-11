@@ -12,23 +12,27 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-// FIX: Implementa AbstractAuthenticationToken per compatibilità con SecurityConfig
 public class CustomJwtConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
     @Override
     public AbstractAuthenticationToken convert(@NonNull Jwt jwt) {
         Collection<GrantedAuthority> authorities = extractAuthorities(jwt);
-        var customJwt = new CustomJwt(jwt, authorities);
+        CustomJwt customJwt = new CustomJwt(jwt, authorities);
+        
+        // Mappatura dei claim standard di Keycloak/OpenID
         customJwt.setFirstname(jwt.getClaimAsString("given_name"));
         customJwt.setLastname(jwt.getClaimAsString("family_name"));
+        customJwt.setEmail(jwt.getClaimAsString("email"));
+        
         return customJwt;
     }
 
     private Collection<GrantedAuthority> extractAuthorities(Jwt jwt) {
         var authorities = new ArrayList<GrantedAuthority>();
         Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
+        
         if (realmAccess != null && realmAccess.get("roles") != null) {
-            var roles = realmAccess.get("roles");
+            Object roles = realmAccess.get("roles");
             if (roles instanceof List<?> list) {
                 list.forEach(role ->
                         authorities.add(new SimpleGrantedAuthority("ROLE_" + role))

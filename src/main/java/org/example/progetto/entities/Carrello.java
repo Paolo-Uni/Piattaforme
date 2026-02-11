@@ -18,10 +18,10 @@ public class Carrello {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "carrello_id", nullable = false)
-    private int id;
+    private Long id;
 
     @OneToOne
-    @JoinColumn(name = "cliente_id")
+    @JoinColumn(name = "cliente")
     private Cliente cliente;
 
     @Column(name = "totale_carrello", precision = 10, scale = 2)

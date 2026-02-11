@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @Component
 public class EnsureClienteExistsFilter extends OncePerRequestFilter {
@@ -26,18 +27,20 @@ public class EnsureClienteExistsFilter extends OncePerRequestFilter {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        if (authentication != null
-                && authentication.isAuthenticated()
-                && authentication.getPrincipal() instanceof Jwt jwt){
+        // Verifichiamo che l'utente sia autenticato via JWT
+        if (authentication != null && authentication.isAuthenticated() && authentication.getPrincipal() instanceof Jwt jwt) {
             String email = jwt.getClaimAsString("email");
-            // Controllo se l'email esiste, altrimenti creo l'utente
-            if (!clienteRepository.existsByEmail(email)) {
+            
+            if (email != null && !clienteRepository.existsByEmail(email)) {
                 Cliente nuovo = new Cliente();
                 nuovo.setNome(jwt.getClaimAsString("given_name"));
                 nuovo.setCognome(jwt.getClaimAsString("family_name"));
                 nuovo.setEmail(email);
-                // Imposta un valore di default per i campi obbligatori se necessario
-                nuovo.setTelefono("0000000000"); 
+                
+                // FIX: Generiamo un valore univoco temporaneo per il telefono 
+                // per evitare violazioni di unicità (UniqueConstraint)
+                nuovo.setTelefono("TEMP-" + UUID.randomUUID().toString().substring(0, 8)); 
+                
                 clienteRepository.save(nuovo);
             }
         }
