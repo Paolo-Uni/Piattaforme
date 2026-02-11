@@ -24,6 +24,12 @@ export class ProductService {
     return this.http.get<Product>(`${this.apiUrl}/${id}`);
   }
 
+  // src/app/services/product.service.ts
+  getProducts(): Observable<any> {
+    // Nota l'URL: deve corrispondere a quello dello script PowerShell
+    return this.http.get<any>(`http://localhost:8082/prodotto/paged`);
+  }
+
   // Metodi ADMIN
   createProduct(product: Product): Observable<any> {
     return this.http.post(`${this.apiUrl}/create`, product);

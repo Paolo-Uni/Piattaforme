@@ -23,12 +23,21 @@ export class ProductListComponent implements OnInit {
     private keycloak: KeycloakService
   ) {}
 
-  ngOnInit() { this.loadProducts(); }
-
+  ngOnInit(): void {
+    this.productService.getProducts().subscribe({
+      next: (response) => {
+        // response è l'oggetto Page di Spring Boot
+        // response.content è l'array reale dei 10 prodotti
+        this.products = response.content;
+        console.log('Prodotti caricati:', this.products);
+      },
+      error: (err) => console.error('Errore nel caricamento prodotti', err)
+    });
+  }
   loadProducts() {
-    this.productService.searchProducts(this.filters).subscribe({
-      next: (res) => this.products = res.content,
-      error: (err) => console.error(err)
+    this.productService.getProducts().subscribe(response => {
+      // Estrai l'array 'content' dal formato Page di Spring Boot
+      this.products = response.content;
     });
   }
 

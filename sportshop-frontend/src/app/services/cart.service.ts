@@ -26,6 +26,9 @@ export class CartService {
   }
 
   checkout(indirizzo: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/ordina?indirizzoSpedizione=${indirizzo}`, {});
+    // Il backend CarrelloController.checkout probabilmente si aspetta l'indirizzo
+    // Verifica se lo vuole come stringa semplice (body) o come oggetto JSON.
+    // Esempio comune:
+    return this.http.post(`${this.apiUrl}/checkout`, { indirizzoSpedizione: indirizzo });
   }
 }

@@ -1,52 +1,54 @@
-import { ApplicationConfig, provideZoneChangeDetection, APP_INITIALIZER, Provider, provideZonelessChangeDetection } from '@angular/core';
+import { APP_INITIALIZER, ApplicationConfig, PLATFORM_ID } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
-import { provideHttpClient, withInterceptors, withInterceptorsFromDi, HTTP_INTERCEPTORS } from '@angular/common/http';
-import { KeycloakService, KeycloakBearerInterceptor } from 'keycloak-angular';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideAnimations } from '@angular/platform-browser/animations';
+import { KeycloakService } from 'keycloak-angular';
+import { authInterceptor } from './core/auth.interceptor';
+import { isPlatformBrowser } from '@angular/common';
 
-// Funzione che inizializza Keycloak
-function initializeKeycloak(keycloak: KeycloakService) {
-  return () =>
-    keycloak.init({
+// Funzione modificata per funzionare con SSR
+function initializeKeycloak(keycloak: KeycloakService, platformId: Object) {
+  return () => {
+    // SE SIAMO SUL SERVER (SSR), NON FACCIAMO NULLA
+    if (!isPlatformBrowser(platformId)) {
+      return Promise.resolve();
+    }
+
+    // SE SIAMO SUL BROWSER, INIZIALIZZIAMO KEYCLOAK
+    return keycloak.init({
       config: {
-        url: 'http://localhost:8081',
-        realm: 'myrealm',
-        clientId: 'sport-client'
+        url: 'http://localhost:8080',
+        realm: 'sportshop-realm',
+        clientId: 'sportshop-client'
       },
       initOptions: {
         onLoad: 'check-sso',
+        // Ora window è sicuro perché siamo dentro l'if (isPlatformBrowser)
+        silentCheckSsoRedirectUri: window.location.origin + '/assets/silent-check-sso.html',
         checkLoginIframe: false
       },
-      // Nelle nuove versioni, l'interceptor si configura spesso separatamente,
-      // ma lasciamo queste opzioni per compatibilità con il service
       enableBearerInterceptor: true,
-      bearerExcludedUrls: ['/assets']
+      bearerPrefix: 'Bearer',
+    }).catch(error => {
+      console.error('⚠️ Keycloak Init Failed:', error);
+      return Promise.resolve(false);
     });
+  };
 }
-
-// Configurazione manuale dei provider per evitare errori di tipo
-const KeycloakProvider: Provider = {
-  provide: APP_INITIALIZER,
-  useFactory: initializeKeycloak,
-  multi: true,
-  deps: [KeycloakService]
-};
-
-const BearerInterceptorProvider: Provider = {
-  provide: HTTP_INTERCEPTORS,
-  useClass: KeycloakBearerInterceptor,
-  multi: true
-};
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideZonelessChangeDetection(),
-    provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    // Importante: withInterceptorsFromDi serve per far funzionare KeycloakBearerInterceptor (che è basato su classi)
-    provideHttpClient(withInterceptorsFromDi()),
-    KeycloakService,
-    KeycloakProvider,
-    BearerInterceptorProvider
+    provideAnimations(),
+    provideHttpClient(withInterceptors([authInterceptor])),
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initializeKeycloak,
+      multi: true,
+      // INIETTIAMO IL PLATFORM_ID PER CAPIRE SE SIAMO SU BROWSER O SERVER
+      deps: [KeycloakService, PLATFORM_ID]
+    },
+    KeycloakService
   ]
 };

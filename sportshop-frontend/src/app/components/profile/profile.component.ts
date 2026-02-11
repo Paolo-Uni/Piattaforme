@@ -8,38 +8,26 @@ import { User } from '../../models/user.model';
   selector: 'app-profile',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  template: `
-    <div class="container mt-4" *ngIf="user">
-      <h2>Il mio Profilo</h2>
-      <div class="mb-3">
-        <label>Email</label>
-        <input type="text" class="form-control" [value]="user.email" disabled>
-      </div>
-      <div class="mb-3">
-        <label>Nome</label>
-        <input type="text" class="form-control" [(ngModel)]="user.nome">
-      </div>
-      <div class="mb-3">
-        <label>Cognome</label>
-        <input type="text" class="form-control" [(ngModel)]="user.cognome">
-      </div>
-      <button class="btn btn-primary" (click)="save()">Salva Modifiche</button>
-    </div>
-  `
+  templateUrl: './profile.component.html',
+  styleUrls: ['./profile.component.css']
 })
 export class ProfileComponent implements OnInit {
   user: User | null = null;
+  isLoading = true;
 
   constructor(private userService: UserService) {}
 
   ngOnInit() {
-    this.userService.getProfile().subscribe(u => this.user = u);
+    this.userService.getProfile().subscribe({
+      next: (u) => { this.user = u; this.isLoading = false; },
+      error: () => { this.isLoading = false; }
+    });
   }
 
   save() {
     if (this.user) {
       this.userService.updateProfile({ nome: this.user.nome, cognome: this.user.cognome })
-        .subscribe(() => alert('Profilo aggiornato!'));
+        .subscribe(() => alert('Profilo aggiornato con successo!'));
     }
   }
 }
