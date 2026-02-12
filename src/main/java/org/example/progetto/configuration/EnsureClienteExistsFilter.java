@@ -6,42 +6,53 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.example.progetto.entities.Cliente;
 import org.example.progetto.repositories.ClienteRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.UUID;
 
 @Component
 public class EnsureClienteExistsFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private ClienteRepository clienteRepository;
+    private final ClienteRepository clienteRepository;
+
+    public EnsureClienteExistsFilter(ClienteRepository clienteRepository) {
+        this.clienteRepository = clienteRepository;
+    }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        // Verifichiamo che l'utente sia autenticato via JWT
-        if (authentication != null && authentication.isAuthenticated() && authentication.getPrincipal() instanceof Jwt jwt) {
+        if (authentication instanceof JwtAuthenticationToken) {
+            Jwt jwt = ((JwtAuthenticationToken) authentication).getToken();
             String email = jwt.getClaimAsString("email");
+            String username = jwt.getClaimAsString("preferred_username");
+            String firstName = jwt.getClaimAsString("given_name");
+            String lastName = jwt.getClaimAsString("family_name");
             
+            // Se l'email manca, usiamo lo username o il soggetto come fallback
+            if (email == null) {
+                email = username != null ? username : jwt.getSubject();
+            }
+
+            // Controlla se il cliente esiste, altrimenti crealo
             if (email != null && !clienteRepository.existsByEmail(email)) {
-                Cliente nuovo = new Cliente();
-                nuovo.setNome(jwt.getClaimAsString("given_name"));
-                nuovo.setCognome(jwt.getClaimAsString("family_name"));
-                nuovo.setEmail(email);
+                Cliente newCliente = new Cliente();
+                newCliente.setEmail(email);
+                newCliente.setNome(firstName != null ? firstName : "Utente");
+                newCliente.setCognome(lastName != null ? lastName : "Keycloak");
+                newCliente.setIndirizzo("Da completare"); // Valore di default
+                newCliente.setTelefono("");
+                clienteRepository.save(newCliente);
                 
-                // FIX: Generiamo un valore univoco temporaneo per il telefono 
-                // per evitare violazioni di unicità (UniqueConstraint)
-                nuovo.setTelefono("TEMP-" + UUID.randomUUID().toString().substring(0, 8)); 
-                
-                clienteRepository.save(nuovo);
+                System.out.println("Nuovo cliente creato automaticamente: " + email);
             }
         }
 

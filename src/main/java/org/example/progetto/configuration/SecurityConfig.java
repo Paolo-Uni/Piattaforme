@@ -10,7 +10,8 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfigurationSource;
+// Non usato qui ma comune
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -18,29 +19,33 @@ import org.springframework.web.cors.CorsConfigurationSource;
 public class SecurityConfig {
 
     private final CustomJwtConverter customJwtConverter;
-    private final CorsConfigurationSource corsConfigurationSource;
+    private final EnsureClienteExistsFilter ensureClienteExistsFilter;
 
-    public SecurityConfig(CustomJwtConverter customJwtConverter, CorsConfigurationSource corsConfigurationSource) {
+    public SecurityConfig(CustomJwtConverter customJwtConverter, EnsureClienteExistsFilter ensureClienteExistsFilter) {
         this.customJwtConverter = customJwtConverter;
-        this.corsConfigurationSource = corsConfigurationSource;
+        this.ensureClienteExistsFilter = ensureClienteExistsFilter;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource))
-                .authorizeHttpRequests(auth -> auth
-                        // PERMETTI L'ACCESSO PUBBLICO AI PRODOTTI (SOLO LETTURA)
-                        .requestMatchers(HttpMethod.GET, "/prodotto/**").permitAll()
-                        // PERMETTI L'ACCESSO PUBBLICO ALLA REGISTRAZIONE UTENTI (se necessario)
-                        // .requestMatchers(HttpMethod.POST, "/cliente/registrazione").permitAll()
-                        .anyRequest().authenticated()
-                )
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(customJwtConverter))
-                )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        http.csrf(AbstractHttpConfigurer::disable)
+            .cors(cors -> cors.configure(http))
+            .authorizeHttpRequests(auth -> auth
+                // Endpoint pubblici
+                .requestMatchers(HttpMethod.GET, "/api/prodotti/**", "/api/prodotti").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/clienti", "/api/clienti/login").permitAll()
+                // Endpoint protetti (richiedono autenticazione)
+                .requestMatchers("/api/ordini/**").authenticated()
+                .requestMatchers("/api/carrello/**").authenticated()
+                .requestMatchers("/api/clienti/me").authenticated() // Fondamentale per il profilo
+                .anyRequest().authenticated()
+            )
+            .oauth2ResourceServer(oauth2 -> oauth2
+                .jwt(jwt -> jwt.jwtAuthenticationConverter(customJwtConverter))
+            )
+            .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // AGGIUNTA FONDAMENTALE: Il filtro deve girare DOPO l'autenticazione del token
+            .addFilterAfter(ensureClienteExistsFilter, BearerTokenAuthenticationFilter.class);
 
         return http.build();
     }
