@@ -21,10 +21,10 @@ export class NavbarComponent implements OnInit {
   constructor(private keycloak: KeycloakService) {}
 
   async ngOnInit() {
-    // 1. Verifica lo stato del login
-    const isLoggedIn = this.keycloak.isLoggedIn();
+    // 1. Verifica lo stato del login (deve essere atteso con await)
+    const isLoggedIn = await this.keycloak.isLoggedIn();
     console.log('--- NAVBAR INIT ---');
-    console.log('Is User Logged In?', isLoggedIn); // Guarda questo log nella console!
+    console.log('Is User Logged In?', isLoggedIn);
 
     if (isLoggedIn) {
       try {
@@ -41,6 +41,9 @@ export class NavbarComponent implements OnInit {
 
       } catch (error) {
         console.error('Errore caricamento profilo:', error);
+        this.ngZone.run(() => {
+          this.loggedIn.set(false);
+        });
       }
     } else {
       // Reset stato
