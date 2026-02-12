@@ -1,41 +1,28 @@
-import { Injectable } from '@angular/core';
-import {
-  ActivatedRouteSnapshot,
-  Router,
-  RouterStateSnapshot
-} from '@angular/router';
-import { KeycloakAuthGuard, KeycloakService } from 'keycloak-angular';
+import { inject } from '@angular/core';
+import { CanActivateFn, Router } from '@angular/router';
+import { KeycloakService } from 'keycloak-angular';
 
-@Injectable({
-  providedIn: 'root'
-})
-export class AuthGuard extends KeycloakAuthGuard {
-  constructor(
-    protected override router: Router,
-    protected override keycloakAngular: KeycloakService
-  ) {
-    super(router, keycloakAngular);
+export const AuthGuard: CanActivateFn = async (route, state) => {
+  const keycloak = inject(KeycloakService);
+  const router = inject(Router);
+
+  // Verifica se l'utente è loggato
+  const loggedIn = keycloak.isLoggedIn();
+
+  if (loggedIn) {
+    // Controllo Ruoli (se definiti nella rotta)
+    const requiredRoles = route.data['roles'] as string[];
+    if (requiredRoles && requiredRoles.length > 0) {
+      const hasRole = requiredRoles.some(role => keycloak.getUserRoles().includes(role));
+      return hasRole;
+    }
+    return true;
   }
 
-  public async isAccessAllowed(
-    route: ActivatedRouteSnapshot,
-    state: RouterStateSnapshot
-  ): Promise<boolean> {
-    // 1. Forza il login se l'utente non è autenticato
-    if (!this.authenticated) {
-      await this.keycloakAngular.login({
-        redirectUri: window.location.origin + state.url
-      });
-      return false;
-    }
+  // Se non è loggato, avvia il login
+  await keycloak.login({
+    redirectUri: window.location.origin + state.url
+  });
 
-    // 2. Controllo Ruoli (Opzionale: se la rotta richiede ruoli specifici come 'ADMIN')
-    const requiredRoles = route.data['roles'];
-    if (!(requiredRoles instanceof Array) || requiredRoles.length === 0) {
-      return true; // Nessun ruolo richiesto, accesso consentito
-    }
-
-    // Controlla se l'utente ha i ruoli richiesti
-    return requiredRoles.every((role) => this.roles.includes(role));
-  }
-}
+  return false;
+};

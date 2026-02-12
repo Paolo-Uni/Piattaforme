@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { KeycloakService } from 'keycloak-angular';
 
@@ -10,19 +10,31 @@ import { KeycloakService } from 'keycloak-angular';
     @if (!loggedIn) {
       <button (click)="login()" class="btn btn-primary">Login</button>
     } @else {
-      <button (click)="logout()" class="btn btn-danger">Logout</button>
+      <div class="d-flex align-items-center gap-2">
+        <span class="text-white me-2">Ciao, {{ username }}</span>
+        <button (click)="logout()" class="btn btn-danger btn-sm">Logout</button>
+      </div>
     }
   `
 })
-export class KeycloackComponent {
-
+export class KeycloackComponent implements OnInit {
   loggedIn = false;
+  username = '';
 
-  constructor(private keycloak: KeycloakService) {
-    // FIX: Nelle nuove versioni isLoggedIn() ritorna un booleano diretto, non una Promise.
-    // Se ti da ancora errore, prova: this.keycloak.isLoggedIn().then(...)
-    // Ma l'errore nello screenshot diceva "Property then does not exist on type boolean", quindi questa è la via giusta:
-    this.loggedIn = this.keycloak.isLoggedIn();
+  constructor(private keycloak: KeycloakService) {}
+
+  async ngOnInit() {
+    // isLoggedIn() ritorna un booleano sincrono nelle versioni recenti,
+    // ma per sicurezza lo avvolgiamo in un try/catch se ci sono problemi di inizializzazione
+    try {
+      this.loggedIn = this.keycloak.isLoggedIn();
+      if (this.loggedIn) {
+        const profile = await this.keycloak.loadUserProfile();
+        this.username = profile.username || '';
+      }
+    } catch (e) {
+      console.error('Errore lettura stato Keycloak:', e);
+    }
   }
 
   login() {
