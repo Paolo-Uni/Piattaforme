@@ -1,18 +1,69 @@
 <div class="container mt-4">
-  <div class="card p-3 mb-4 shadow-sm border-0 bg-light">
-    <div class="row g-2">
-      <div class="col-md-4">
-        <input type="text" class="form-control" placeholder="Cerca per nome..." [(ngModel)]="filters.nome">
+  <div class="card p-4 mb-5 shadow-sm border-0 bg-white">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="text-secondary m-0"><i class="bi bi-funnel-fill me-2"></i>Filtra Prodotti</h5>
+    </div>
+
+    <div class="row g-3">
+
+      <div class="col-md-12 mb-2">
+        <div class="input-group">
+          <input
+            type="text"
+            class="form-control bg-light border-end-0"
+            placeholder="Cerca per nome prodotto e premi Invio..."
+            [(ngModel)]="filters.nome"
+            (keyup.enter)="loadProducts()">
+          <button
+            class="btn btn-light border border-start-0 text-secondary"
+            type="button"
+            (click)="loadProducts()"
+            title="Cerca">
+            <i class="bi bi-search"></i>
+          </button>
+        </div>
       </div>
+
       <div class="col-md-3">
-        <input type="text" class="form-control" placeholder="Marca..." [(ngModel)]="filters.marca">
+        <label class="form-label small text-muted">Marca</label>
+        <select class="form-select" [(ngModel)]="filters.marca" (change)="loadProducts()">
+          <option value="">Tutte le marche</option>
+          @for (m of marcheList(); track $index) {
+            <option [value]="m">{{ m }}</option>
+          }
+        </select>
       </div>
+
       <div class="col-md-3">
-        <input type="text" class="form-control" placeholder="Categoria..." [(ngModel)]="filters.categoria">
+        <label class="form-label small text-muted">Categoria</label>
+        <select class="form-select" [(ngModel)]="filters.categoria" (change)="loadProducts()">
+          <option value="">Tutte le categorie</option>
+          @for (c of categorieList(); track $index) {
+            <option [value]="c">{{ c }}</option>
+          }
+        </select>
       </div>
-      <div class="col-md-2">
-        <button class="btn btn-primary w-100" (click)="loadProducts()">Cerca</button>
+
+      <div class="col-md-3">
+        <label class="form-label small text-muted">Colore</label>
+        <select class="form-select" [(ngModel)]="filters.colore" (change)="loadProducts()">
+          <option value="">Tutti i colori</option>
+          @for (c of coloriList(); track $index) {
+            <option [value]="c">{{ c }}</option>
+          }
+        </select>
       </div>
+
+      <div class="col-md-3">
+        <label class="form-label small text-muted">Taglia</label>
+        <select class="form-select" [(ngModel)]="filters.taglia" (change)="loadProducts()">
+          <option value="">Tutte le taglie</option>
+          @for (t of taglieList(); track $index) {
+            <option [value]="t">{{ t }}</option>
+          }
+        </select>
+      </div>
+
     </div>
   </div>
 
@@ -20,22 +71,27 @@
     @for (p of products(); track p.id) {
       <div class="col">
         <div class="card h-100 product-card shadow-sm border-0">
-          <div class="card-img-top d-flex align-items-center justify-content-center bg-white p-4" style="height: 200px;">
+          <div class="card-img-top d-flex align-items-center justify-content-center bg-white p-4 position-relative" style="height: 200px;">
             <i class="bi bi-bag-heart text-primary" style="font-size: 4rem;"></i>
+
+            @if (p.stock <= 0) {
+              <div class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-flex align-items-center justify-content-center">
+                <span class="badge bg-danger fs-5 shadow">ESAURITO</span>
+              </div>
+            }
           </div>
 
           <div class="card-body d-flex flex-column">
-            <h5 class="card-title fw-bold text-dark">{{ p.nome }}</h5>
-            <p class="card-text text-muted small mb-1">{{ p.marca }} - {{ p.categoria }}</p>
-            <p class="card-text text-truncate">{{ p.descrizione }}</p>
+            <h5 class="card-title fw-bold text-dark text-truncate" title="{{ p.nome }}">{{ p.nome }}</h5>
+            <p class="card-text text-muted small mb-2">{{ p.marca }} | {{ p.categoria }}</p>
+
+            <div class="mb-3">
+              @if(p.colore) { <span class="badge bg-light text-dark border me-1">{{ p.colore }}</span> }
+              @if(p.taglia) { <span class="badge bg-light text-dark border">{{ p.taglia }}</span> }
+            </div>
 
             <div class="mt-auto d-flex justify-content-between align-items-center">
               <span class="fs-5 fw-bold text-primary">{{ p.prezzo | currency:'EUR' }}</span>
-              @if (p.stock > 0) {
-                <span class="badge bg-success-subtle text-success">Disponibile</span>
-              } @else {
-                <span class="badge bg-danger-subtle text-danger">Esaurito</span>
-              }
             </div>
           </div>
 
@@ -51,7 +107,9 @@
       </div>
     } @empty {
       <div class="col-12 text-center py-5">
-        <p class="text-muted fs-4">Nessun prodotto trovato.</p>
+        <div class="text-muted mb-3"><i class="bi bi-search" style="font-size: 3rem;"></i></div>
+        <p class="text-muted fs-4">Nessun prodotto corrisponde ai filtri selezionati.</p>
+        <button class="btn btn-link" (click)="filters = {nome: '', marca: '', categoria: '', colore: '', taglia: ''}; loadProducts()">Resetta filtri</button>
       </div>
     }
   </div>

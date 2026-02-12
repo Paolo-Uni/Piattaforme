@@ -7,6 +7,8 @@ export interface ProductFilters {
   nome?: string;
   marca?: string;
   categoria?: string;
+  colore?: string;
+  taglia?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -14,9 +16,24 @@ export class ProductService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = 'http://localhost:8082/prodotto';
 
-  /**
-   * Cerca prodotti con filtri e paginazione.
-   */
+  // --- Metodi per ottenere le liste dei filtri ---
+  getMarche(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.apiUrl}/marche`);
+  }
+
+  getCategorie(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.apiUrl}/categorie`);
+  }
+
+  getTaglie(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.apiUrl}/taglie`);
+  }
+
+  getColori(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.apiUrl}/colori`);
+  }
+  // ----------------------------------------------
+
   searchProducts(filters: ProductFilters, page: number = 0, size: number = 10): Observable<Page<Product>> {
     let params = new HttpParams()
       .set('pageNumber', page)
@@ -25,18 +42,14 @@ export class ProductService {
     if (filters.nome) params = params.set('nome', filters.nome);
     if (filters.marca) params = params.set('marca', filters.marca);
     if (filters.categoria) params = params.set('categoria', filters.categoria);
+    if (filters.colore) params = params.set('colore', filters.colore);
+    if (filters.taglia) params = params.set('taglia', filters.taglia);
 
     return this.http.get<Page<Product>>(`${this.apiUrl}/search`, {params});
   }
 
   getProductById(id: number): Observable<Product> {
     return this.http.get<Product>(`${this.apiUrl}/${id}`);
-  }
-
-  // ESEMPIO CORRETTO
-  getProdotto(id: number): Observable<Product> {
-    // Nota lo slash prima di ${id}
-    return this.http.get<Product>(`${this.apiUrl}/prodotto/${id}`);
   }
 
   // Metodi ADMIN

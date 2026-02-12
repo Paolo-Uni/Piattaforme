@@ -8,6 +8,7 @@ import { KeycloakService } from 'keycloak-angular';
 
 @Component({
   selector: 'app-product-detail',
+  standalone: true, // Aggiunto per chiarezza, dato che usi imports
   imports: [CommonModule, RouterModule],
   templateUrl: './product-detail.component.html',
   styleUrls: ['./product-detail.component.css']
@@ -22,32 +23,45 @@ export class ProductDetailComponent implements OnInit {
   loading = signal(true);
 
   ngOnInit(): void {
-    const id = Number(this.route.snapshot.paramMap.get('id'));
-    if (id) {
-      this.productService.getProductById(id).subscribe({
-        next: (data) => {
-          this.product.set(data);
-          this.loading.set(false);
-        },
-        error: (err) => {
-          console.error('Errore caricamento prodotto', err);
-          this.loading.set(false);
-        }
-      });
-    }
+    // CORREZIONE: Usa subscribe invece di snapshot per garantire la lettura dell'ID
+    this.route.paramMap.subscribe(params => {
+      const idParam = params.get('id');
+      console.log('ID catturato dalla rotta:', idParam); // Debug
+
+      if (idParam) {
+        const id = Number(idParam);
+        this.loadProduct(id);
+      } else {
+        console.error('Nessun ID trovato nella rotta');
+        this.loading.set(false);
+      }
+    });
+  }
+
+  loadProduct(id: number) {
+    this.loading.set(true);
+    this.productService.getProductById(id).subscribe({
+      next: (data) => {
+        console.log('Prodotto scaricato:', data); // Debug
+        this.product.set(data);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        console.error('Errore caricamento prodotto:', err);
+        // Se errore, product resta null e l'HTML mostrerà "Non trovato"
+        this.loading.set(false);
+      }
+    });
   }
 
   addToCart(p: Product) {
-    // 1. CONTROLLA SE L'UTENTE È LOGGATO
     if (!this.keycloak.isLoggedIn()) {
-      // Se non è loggato, reindirizza al login e poi torna qui
       this.keycloak.login({
         redirectUri: window.location.origin + '/products/' + p.id
       });
       return;
     }
 
-    // 2. SE LOGGATO, PROCEDI CON L'AGGIUNTA AL CARRELLO
     this.cartService.addToCart(p.id, 1).subscribe({
       next: () => alert('Prodotto aggiunto al carrello!'),
       error: (err) => alert('Errore: ' + (err.error?.message || 'Impossibile aggiungere al carrello'))

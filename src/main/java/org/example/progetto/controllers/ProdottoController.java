@@ -24,64 +24,25 @@ public class ProdottoController {
     @Autowired
     private ProdottoService prodottoService;
 
-    @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/create")
-    public ResponseEntity<?> aggiungiProdotto(@RequestBody Prodotto prod) {
-        try {
-            prodottoService.aggiungiProdotto(prod);
-            return ResponseEntity.ok(new ResponseMessage("Prodotto aggiunto con successo"));
-        } catch (ProductAlreadyExistsException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(new ResponseMessage(e.getMessage()));
-        }
+    @GetMapping("/marche")
+    public List<String> getMarche() {
+        return prodottoService.getAllMarche();
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/delete")
-    public ResponseEntity<?> cancellaProdotto(@RequestParam Long idProdotto) {
-        try {
-            prodottoService.cancellaProdotto(idProdotto);
-            return ResponseEntity.ok(new ResponseMessage("Prodotto cancellato con successo"));
-        } catch (ProductNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseMessage("Prodotto non trovato"));
-        }
+    @GetMapping("/categorie")
+    public List<String> getCategorie() {
+        return prodottoService.getAllCategorie();
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
-    @PatchMapping("/add-stock")
-    public ResponseEntity<?> aumentaQuantitaProdotto(@RequestParam Long idProdotto, @RequestParam Integer quantita) {
-        try {
-            prodottoService.aumentaQuantitaProdotto(idProdotto, quantita);
-            return ResponseEntity.ok(new ResponseMessage("Quantità aggiornata con successo"));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ResponseMessage(e.getMessage()));
-        }
+    @GetMapping("/taglie")
+    public List<String> getTaglie() {
+        return prodottoService.getAllTaglie();
     }
 
-    // NUOVO METODO AGGIUNTO: Riduzione manuale stock (Admin)
-    @PreAuthorize("hasRole('ADMIN')")
-    @PatchMapping("/remove-stock")
-    public ResponseEntity<?> diminuisciQuantitaProdotto(@RequestParam Long idProdotto, @RequestParam Integer quantita) {
-        try {
-            prodottoService.diminuisciQuantitaProdotto(idProdotto, quantita);
-            return ResponseEntity.ok(new ResponseMessage("Stock ridotto con successo"));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ResponseMessage(e.getMessage()));
-        }
+    @GetMapping("/colori")
+    public List<String> getColori() {
+        return prodottoService.getAllColori();
     }
-
-    // === METODO MANCANTE AGGIUNTO ===
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getProdotto(@PathVariable Long id) {
-        try {
-            // Assicurati che nel ProdottoService esista un metodo getProdotto(Long id)
-            // che restituisca un Prodotto o lanci ProductNotFoundException
-            Prodotto p = prodottoService.getProdottoById(id);
-            return ResponseEntity.ok(p);
-        } catch (ProductNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseMessage("Prodotto non trovato"));
-        }
-    }
-    // ================================
 
     @GetMapping("/search")
     public ResponseEntity<Page<Prodotto>> ricercaDinamica(
@@ -95,22 +56,44 @@ public class ProdottoController {
             @RequestParam(defaultValue = "id") String sortBy
     ) {
         Pageable paging = PageRequest.of(pageNumber, pageSize, Sort.by(sortBy));
-        Page<Prodotto> result = prodottoService.ricercaDinamica(nome, marca, categoria, colore, taglia, paging);
-        
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(prodottoService.ricercaDinamica(nome, marca, categoria, colore, taglia, paging));
     }
 
-    @GetMapping()
-    public List<Prodotto> getAll() {
-        return prodottoService.getProdotti();
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getProdotto(@PathVariable("id") Long id) {
+        try {
+            return ResponseEntity.ok(prodottoService.getProdottoById(id));
+        } catch (ProductNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseMessage("Prodotto non trovato"));
+        }
     }
 
-    @GetMapping("/paged")
-    public ResponseEntity<?> getAllPaged(
-            @RequestParam(defaultValue = "0") int pageNumber, 
-            @RequestParam(defaultValue = "10") int pageSize, 
-            @RequestParam(defaultValue = "id") String sortBy) {
-        List<Prodotto> ris = prodottoService.getProdotti(pageNumber, pageSize, sortBy);
-        return ris.isEmpty() ? ResponseEntity.ok(new ResponseMessage("Fine risultati")) : ResponseEntity.ok(ris);
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/create")
+    public ResponseEntity<?> aggiungiProdotto(@RequestBody Prodotto prod) {
+        try {
+            prodottoService.aggiungiProdotto(prod);
+            return ResponseEntity.ok(new ResponseMessage("Prodotto aggiunto"));
+        } catch (ProductAlreadyExistsException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(new ResponseMessage(e.getMessage()));
+        }
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/delete")
+    public ResponseEntity<?> cancellaProdotto(@RequestParam Long idProdotto) {
+        try {
+            prodottoService.cancellaProdotto(idProdotto);
+            return ResponseEntity.ok(new ResponseMessage("Cancellato"));
+        } catch (ProductNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseMessage("Non trovato"));
+        }
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/add-stock")
+    public ResponseEntity<?> aumentaStock(@RequestParam Long idProdotto, @RequestParam Integer quantita) {
+        prodottoService.aumentaQuantitaProdotto(idProdotto, quantita);
+        return ResponseEntity.ok(new ResponseMessage("Stock aggiornato"));
     }
 }

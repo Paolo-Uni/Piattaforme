@@ -17,29 +17,47 @@
 
       <div class="col-md-6">
         <h1 class="display-5 fw-bold text-dark mb-2">{{ p.nome }}</h1>
-        <p class="lead text-muted mb-4">{{ p.marca }} - {{ p.categoria }}</p>
+        <p class="lead text-muted mb-3">{{ p.marca }} - {{ p.categoria }}</p>
 
         <div class="fs-2 fw-bold text-primary mb-4">
           {{ p.prezzo | currency:'EUR' }}
         </div>
 
-        <p class="mb-4">{{ p.descrizione }}</p>
+        <div class="row mb-4">
+          <div class="col-6">
+            <div class="p-3 border rounded bg-light">
+              <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.75rem;">Colore</small>
+              <span class="fs-5 text-dark">{{ p.colore || 'N/D' }}</span>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-3 border rounded bg-light">
+              <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.75rem;">Taglia</small>
+              <span class="fs-5 text-dark">{{ p.taglia || 'Unica' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <h5 class="fw-bold text-dark">Descrizione</h5>
+          <p class="text-secondary">{{ p.descrizione }}</p>
+        </div>
 
         <div class="d-flex align-items-center gap-3 mb-4">
           @if (p.stock > 0) {
-            <span class="badge bg-success-subtle text-success px-3 py-2 fs-6">
+            <span class="badge bg-success-subtle text-success px-3 py-2 fs-6 border border-success-subtle">
               <i class="bi bi-check-circle me-1"></i> Disponibile ({{p.stock}} pz.)
             </span>
           } @else {
-            <span class="badge bg-danger-subtle text-danger px-3 py-2 fs-6">
+            <span class="badge bg-danger-subtle text-danger px-3 py-2 fs-6 border border-danger-subtle">
               <i class="bi bi-x-circle me-1"></i> Esaurito
             </span>
           }
         </div>
 
-        <div class="d-grid gap-2 col-lg-6">
+        <div class="d-grid gap-2 col-lg-8">
           <button
-            class="btn btn-primary btn-lg"
+            class="btn btn-primary btn-lg py-3"
             (click)="addToCart(p)"
             [disabled]="p.stock <= 0">
             <i class="bi bi-cart-plus me-2"></i>

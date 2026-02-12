@@ -11,11 +11,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -23,6 +23,8 @@ public class ProdottoService {
 
     @Autowired
     private ProdottoRepository prodottoRepository;
+
+    private final List<String> TAGLIE_STANDARD = Arrays.asList("XS", "S", "M", "L", "XL", "XXL");
 
     @Transactional(readOnly = true)
     public List<Prodotto> getProdotti() {
@@ -38,40 +40,79 @@ public class ProdottoService {
 
     @Transactional(readOnly = true)
     public Page<Prodotto> ricercaDinamica(String nome, String marca, String categoria, String colore, String taglia, Pageable pageable) {
-        // Nota: "_" è valido in Java 21+ con --enable-preview abilitato nel pom.xml
-        return prodottoRepository.findAll((Specification<Prodotto>) (root, _, criteriaBuilder) -> {
+        return prodottoRepository.findAll((root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
             if (nome != null && !nome.isEmpty()) {
-                predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("nome")), "%" + nome.toLowerCase() + "%"));
+                predicates.add(cb.like(cb.lower(root.get("nome")), "%" + nome.toLowerCase() + "%"));
             }
             if (marca != null && !marca.isEmpty()) {
-                predicates.add(criteriaBuilder.equal(root.get("marca"), marca));
+                predicates.add(cb.equal(root.get("marca"), marca));
             }
             if (categoria != null && !categoria.isEmpty()) {
-                predicates.add(criteriaBuilder.equal(root.get("categoria"), categoria));
+                predicates.add(cb.equal(root.get("categoria"), categoria));
             }
             if (colore != null && !colore.isEmpty()) {
-                predicates.add(criteriaBuilder.equal(root.get("colore"), colore));
+                predicates.add(cb.equal(root.get("colore"), colore));
             }
             if (taglia != null && !taglia.isEmpty()) {
-                predicates.add(criteriaBuilder.equal(root.get("taglia"), taglia));
+                if (taglia.equalsIgnoreCase("Altro")) {
+                    predicates.add(cb.not(root.get("taglia").in(TAGLIE_STANDARD)));
+                } else {
+                    predicates.add(cb.equal(root.get("taglia"), taglia));
+                }
             }
 
-            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+            return cb.and(predicates.toArray(new Predicate[0]));
         }, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getAllMarche() {
+        return prodottoRepository.findDistinctMarche();
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getAllCategorie() {
+        return prodottoRepository.findDistinctCategorie();
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getAllColori() {
+        return prodottoRepository.findDistinctColori();
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getAllTaglie() {
+        List<String> allTaglie = prodottoRepository.findDistinctTaglie();
+        List<String> result = new ArrayList<>();
+        boolean hasOther = false;
+
+        for (String s : TAGLIE_STANDARD) {
+            if (allTaglie.stream().anyMatch(t -> t.equalsIgnoreCase(s))) {
+                result.add(s.toUpperCase());
+            }
+        }
+
+        for (String t : allTaglie) {
+            if (TAGLIE_STANDARD.stream().noneMatch(s -> s.equalsIgnoreCase(t))) {
+                hasOther = true;
+                break;
+            }
+        }
+
+        if (hasOther) {
+            result.add("Altro");
+        }
+
+        return result;
     }
 
     @Transactional
     public void aggiungiProdotto(Prodotto prodotto) throws ProductAlreadyExistsException {
         if (prodotto.getId() != null && prodottoRepository.existsById(prodotto.getId())) {
-            throw new ProductAlreadyExistsException("Prodotto già esistente con ID: " + prodotto.getId());
+            throw new ProductAlreadyExistsException("Prodotto già esistente");
         }
-        
-        if (prodotto.getStock() == null || prodotto.getStock() < 0) {
-            throw new InvalidQuantityException("La quantità inserita non è valida");
-        }
-        
         prodottoRepository.save(prodotto);
     }
 
@@ -85,38 +126,22 @@ public class ProdottoService {
 
     @Transactional
     public void aumentaQuantitaProdotto(Long id, int quantita) {
-        if (quantita <= 0) {
-            throw new InvalidQuantityException("La quantità da aggiungere deve essere positiva");
-        }
-        
-        Prodotto prodotto = prodottoRepository.findById(id)
-                .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
-        
+        Prodotto prodotto = getProdottoById(id);
         prodotto.setStock(prodotto.getStock() + quantita);
         prodottoRepository.save(prodotto);
     }
 
     @Transactional
     public void diminuisciQuantitaProdotto(Long id, int quantita) {
-        if (quantita <= 0) {
-            throw new InvalidQuantityException("La quantità da sottrarre deve essere positiva");
-        }
-
-        Prodotto prodotto = prodottoRepository.findById(id)
-                .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
-        
-        if (prodotto.getStock() - quantita < 0) {
-            throw new InvalidQuantityException("Quantità in stock insufficiente");
-        }
-        
+        Prodotto prodotto = getProdottoById(id);
+        if (prodotto.getStock() < quantita) throw new InvalidQuantityException("Stock insufficiente");
         prodotto.setStock(prodotto.getStock() - quantita);
         prodottoRepository.save(prodotto);
     }
 
-    // RIAGGIUNTO: Metodo utile per dettaglio prodotto o controlli futuri
     @Transactional(readOnly = true)
     public Prodotto getProdottoById(Long id) {
         return prodottoRepository.findById(id)
-                .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato con ID: " + id));
+                .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
     }
 }
