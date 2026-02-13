@@ -8,6 +8,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface OggettoOrdineRepository extends JpaRepository<OggettoOrdine,Long> {
+public interface OggettoOrdineRepository extends JpaRepository<OggettoOrdine, Long> {
     List<OggettoOrdine> findByOrdine(Ordine ordine);
 }

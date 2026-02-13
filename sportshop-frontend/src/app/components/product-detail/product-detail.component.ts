@@ -1,70 +1,91 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ProductService } from '../../services/product.service';
 import { CartService } from '../../services/cart.service';
 import { Product } from '../../models/product.model';
-import { KeycloakService } from 'keycloak-angular';
+import { FormsModule } from '@angular/forms';
+import { OAuthService } from 'angular-oauth2-oidc';
 
 @Component({
   selector: 'app-product-detail',
-  standalone: true, // Aggiunto per chiarezza, dato che usi imports
-  imports: [CommonModule, RouterModule],
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './product-detail.component.html',
   styleUrls: ['./product-detail.component.css']
 })
 export class ProductDetailComponent implements OnInit {
-  private readonly route = inject(ActivatedRoute);
-  private readonly productService = inject(ProductService);
-  private readonly cartService = inject(CartService);
-  private readonly keycloak = inject(KeycloakService);
 
-  product = signal<Product | null>(null);
-  loading = signal(true);
+  product: Product | null = null;
+  quantity: number = 1;
+  message: string = '';
+  isError: boolean = false;
+  isLoading: boolean = false; // Partiamo da false, attiviamo solo se abbiamo un ID
+  isBrowser: boolean;
+
+  constructor(
+    private route: ActivatedRoute,
+    private productService: ProductService,
+    private cartService: CartService,
+    private oauthService: OAuthService,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
+    this.isBrowser = isPlatformBrowser(this.platformId);
+  }
 
   ngOnInit(): void {
-    // CORREZIONE: Usa subscribe invece di snapshot per garantire la lettura dell'ID
+    // Iscrizione ai parametri URL
     this.route.paramMap.subscribe(params => {
       const idParam = params.get('id');
-      console.log('ID catturato dalla rotta:', idParam); // Debug
 
-      if (idParam) {
-        const id = Number(idParam);
-        this.loadProduct(id);
+      if (idParam && !isNaN(Number(idParam))) {
+        this.loadProduct(Number(idParam));
       } else {
-        console.error('Nessun ID trovato nella rotta');
-        this.loading.set(false);
+        this.isError = true;
+        this.message = 'ID Prodotto non valido';
       }
     });
   }
 
-  loadProduct(id: number) {
-    this.loading.set(true);
+  loadProduct(id: number): void {
+    this.isLoading = true; // Inizio caricamento
+    this.isError = false;
+
     this.productService.getProductById(id).subscribe({
       next: (data) => {
-        console.log('Prodotto scaricato:', data); // Debug
-        this.product.set(data);
-        this.loading.set(false);
+        this.product = data;
+        this.isLoading = false; // FINE caricamento successo
       },
       error: (err) => {
-        console.error('Errore caricamento prodotto:', err);
-        // Se errore, product resta null e l'HTML mostrerà "Non trovato"
-        this.loading.set(false);
+        console.error('Errore dettaglio prodotto:', err);
+        this.message = 'Prodotto non trovato o errore di connessione.';
+        this.isError = true;
+        this.isLoading = false; // FINE caricamento errore (FONDAMENTALE)
       }
     });
   }
 
-  addToCart(p: Product) {
-    if (!this.keycloak.isLoggedIn()) {
-      this.keycloak.login({
-        redirectUri: window.location.origin + '/products/' + p.id
-      });
-      return;
+  addToCart(): void {
+    // Verifica browser-side per OAuth
+    if (this.isBrowser) {
+      if (!this.oauthService.hasValidAccessToken()) {
+        this.oauthService.initCodeFlow();
+        return;
+      }
     }
 
-    this.cartService.addToCart(p.id, 1).subscribe({
-      next: () => alert('Prodotto aggiunto al carrello!'),
-      error: (err) => alert('Errore: ' + (err.error?.message || 'Impossibile aggiungere al carrello'))
-    });
+    if (this.product) {
+      this.cartService.addToCart(this.product.id, this.quantity).subscribe({
+        next: () => {
+          this.message = 'Prodotto aggiunto al carrello!';
+          this.isError = false;
+          setTimeout(() => this.message = '', 3000);
+        },
+        error: (err) => {
+          this.message = err.error?.message || 'Errore durante l\'aggiunta.';
+          this.isError = true;
+        }
+      });
+    }
   }
 }

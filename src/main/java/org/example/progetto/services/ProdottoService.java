@@ -1,12 +1,14 @@
 package org.example.progetto.services;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.criteria.Predicate;
+import lombok.RequiredArgsConstructor;
 import org.example.progetto.entities.Prodotto;
 import org.example.progetto.exceptions.InvalidQuantityException;
 import org.example.progetto.exceptions.ProductAlreadyExistsException;
 import org.example.progetto.exceptions.ProductNotFoundException;
 import org.example.progetto.repositories.ProdottoRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -19,10 +21,11 @@ import java.util.Arrays;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class ProdottoService {
 
-    @Autowired
-    private ProdottoRepository prodottoRepository;
+    private final ProdottoRepository prodottoRepository;
+    private final EntityManager entityManager;
 
     private final List<String> TAGLIE_STANDARD = Arrays.asList("XS", "S", "M", "L", "XL", "XXL");
 
@@ -126,14 +129,23 @@ public class ProdottoService {
 
     @Transactional
     public void aumentaQuantitaProdotto(Long id, int quantita) {
-        Prodotto prodotto = getProdottoById(id);
+        Prodotto prodotto = prodottoRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
+        
+        // Lock per evitare race conditions se più admin modificano lo stock
+        entityManager.lock(prodotto, LockModeType.PESSIMISTIC_WRITE);
+        
         prodotto.setStock(prodotto.getStock() + quantita);
         prodottoRepository.save(prodotto);
     }
 
     @Transactional
     public void diminuisciQuantitaProdotto(Long id, int quantita) {
-        Prodotto prodotto = getProdottoById(id);
+        Prodotto prodotto = prodottoRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
+        
+        entityManager.lock(prodotto, LockModeType.PESSIMISTIC_WRITE);
+        
         if (prodotto.getStock() < quantita) throw new InvalidQuantityException("Stock insufficiente");
         prodotto.setStock(prodotto.getStock() - quantita);
         prodottoRepository.save(prodotto);

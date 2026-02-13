@@ -2,7 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UserService } from '../../services/user.service';
-import { User } from '../../models/user.model';
+import { User, UserUpdateRequest } from '../../models/user.model';
+import { OAuthService } from 'angular-oauth2-oidc';
 
 @Component({
   selector: 'app-profile',
@@ -12,22 +13,58 @@ import { User } from '../../models/user.model';
   styleUrls: ['./profile.component.css']
 })
 export class ProfileComponent implements OnInit {
+
   user: User | null = null;
-  isLoading = true;
+  message: string = '';
+  isEditing: boolean = false;
 
-  constructor(private userService: UserService) {}
+  // Dati per il form di modifica
+  editData: UserUpdateRequest = {};
 
-  ngOnInit() {
-    this.userService.getProfile().subscribe({
-      next: (u) => { this.user = u; this.isLoading = false; },
-      error: () => { this.isLoading = false; }
+  constructor(private userService: UserService, private oauthService: OAuthService) { }
+
+  ngOnInit(): void {
+    this.loadProfile();
+  }
+
+  loadProfile(): void {
+    this.userService.getMe().subscribe({
+      next: (data) => {
+        this.user = data;
+        // Inizializza i dati del form
+        this.editData = {
+          nome: data.nome,
+          cognome: data.cognome,
+          telefono: data.telefono,
+          indirizzo: data.indirizzo
+        };
+      },
+      error: (err) => {
+        console.error(err);
+        this.message = 'Impossibile caricare il profilo.';
+      }
     });
   }
 
-  save() {
-    if (this.user) {
-      this.userService.updateProfile({ nome: this.user.nome, cognome: this.user.cognome })
-        .subscribe(() => alert('Profilo aggiornato con successo!'));
-    }
+  toggleEdit(): void {
+    this.isEditing = !this.isEditing;
+    this.message = '';
+  }
+
+  saveProfile(): void {
+    this.userService.updateProfile(this.editData).subscribe({
+      next: (updatedUser) => {
+        this.user = updatedUser;
+        this.message = 'Profilo aggiornato con successo!';
+        this.isEditing = false;
+      },
+      error: (err) => {
+        this.message = err.error.message || 'Errore durante l\'aggiornamento.';
+      }
+    });
+  }
+
+  logout(): void {
+    this.oauthService.logOut();
   }
 }

@@ -1,7 +1,9 @@
 package org.example.progetto.entities;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.example.progetto.support.StatoOrdine;
 
@@ -13,10 +15,12 @@ import java.util.List;
 @Entity
 @Table(name = "ordine")
 @Getter @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class Ordine {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ordine_id", nullable = false)
     private Long id;
 
@@ -37,7 +41,6 @@ public class Ordine {
     @Column(name="stato", nullable = false)
     private StatoOrdine stato;
 
-    // Aggiunto per salvare motivazioni annullamento o errori rimborso
     @Column(name = "note")
     private String note;
 

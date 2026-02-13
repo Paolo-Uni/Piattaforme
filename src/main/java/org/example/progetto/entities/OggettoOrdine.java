@@ -1,7 +1,10 @@
 package org.example.progetto.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
@@ -9,10 +12,12 @@ import java.math.BigDecimal;
 @Entity
 @Table(name = "oggetto_ordine")
 @Getter @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class OggettoOrdine {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "oggetto_ordine_id", nullable = false)
     private Long id;
 
@@ -36,6 +41,7 @@ public class OggettoOrdine {
 
     @ManyToOne
     @JoinColumn(name = "ordine")
+    @JsonIgnore // Evita ricorsione
     private Ordine ordine;
 
 }

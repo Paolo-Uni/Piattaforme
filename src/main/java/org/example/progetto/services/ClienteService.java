@@ -1,12 +1,13 @@
 package org.example.progetto.services;
 
+import lombok.RequiredArgsConstructor;
 import org.example.progetto.dto.ClienteDTO;
+import org.example.progetto.dto.ClienteUpdateRequest;
 import org.example.progetto.dto.Request;
 import org.example.progetto.entities.Cliente;
 import org.example.progetto.exceptions.ClienteNotFoundException;
-import org.example.progetto.exceptions.CredentialsAlredyExistException;
+import org.example.progetto.exceptions.CredentialsAlreadyExistException;
 import org.example.progetto.repositories.ClienteRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,20 +16,19 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class ClienteService {
 
-    @Autowired
-    private ClienteRepository clienteRepository;
+    private final ClienteRepository clienteRepository;
 
     @Transactional(propagation = Propagation.REQUIRED)
-    public ClienteDTO registraCliente(Request req) throws CredentialsAlredyExistException {
-        // CORREZIONE: Controlliamo se l'email esiste OPPURE se il telefono è fornito ED esiste già
+    public ClienteDTO registraCliente(Request req) throws CredentialsAlreadyExistException {
         if (clienteRepository.existsByEmail(req.getEmail())) {
-             throw new CredentialsAlredyExistException("L'email è già registrata");
+             throw new CredentialsAlreadyExistException("L'email è già registrata");
         }
         
-        if (req.getTelefono() != null && clienteRepository.findByTelefono(req.getTelefono()).isPresent()) {
-            throw new CredentialsAlredyExistException("Il numero di telefono è già registrato");
+        if (req.getTelefono() != null && !req.getTelefono().isEmpty() && clienteRepository.findByTelefono(req.getTelefono()).isPresent()) {
+            throw new CredentialsAlreadyExistException("Il numero di telefono è già registrato");
         }
 
         Cliente cliente = new Cliente();
@@ -36,6 +36,7 @@ public class ClienteService {
         cliente.setCognome(req.getCognome());
         cliente.setEmail(req.getEmail());
         cliente.setTelefono(req.getTelefono());
+        // L'indirizzo viene solitamente impostato in fase di ordine o update profilo, qui lo lasciamo null o vuoto
         
         Cliente salvato = clienteRepository.save(cliente);
         return toDTO(salvato);
@@ -106,5 +107,32 @@ public class ClienteService {
     @Transactional
     public void saveCliente(Cliente c) {
         clienteRepository.save(c);
+    }
+
+    @Transactional
+    public ClienteDTO updateCliente(String email, ClienteUpdateRequest request) {
+        Cliente cliente = clienteRepository.findByEmail(email)
+                .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato"));
+
+        if (request.getNome() != null && !request.getNome().isBlank()) {
+            cliente.setNome(request.getNome());
+        }
+        if (request.getCognome() != null && !request.getCognome().isBlank()) {
+            cliente.setCognome(request.getCognome());
+        }
+        if (request.getTelefono() != null && !request.getTelefono().isBlank()) {
+            // Opzionale: Controllo se il nuovo telefono è già usato da altri
+            if (!cliente.getTelefono().equals(request.getTelefono()) &&
+                    clienteRepository.findByTelefono(request.getTelefono()).isPresent()) {
+                throw new CredentialsAlreadyExistException("Numero di telefono già in uso da un altro utente.");
+            }
+            cliente.setTelefono(request.getTelefono());
+        }
+        if (request.getIndirizzo() != null && !request.getIndirizzo().isBlank()) {
+            cliente.setIndirizzo(request.getIndirizzo());
+        }
+
+        Cliente aggiornato = clienteRepository.save(cliente);
+        return toDTO(aggiornato);
     }
 }

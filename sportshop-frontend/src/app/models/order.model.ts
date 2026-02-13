@@ -1,11 +1,3 @@
-export interface Order {
-  idOrdine: number;
-  data: string; // LocalDateTime arriva come stringa ISO
-  stato: string;
-  totaleOrdine: number;
-  oggetti: OrderItem[];
-}
-
 export interface OrderItem {
   idOggetto: number;
   nome: string;
@@ -13,4 +5,12 @@ export interface OrderItem {
   colore: string;
   prezzo: number;
   quantita: number;
+}
+
+export interface Order {
+  idOrdine: number;
+  data: string; // Date arriva come stringa ISO dal backend
+  stato: string;
+  totaleOrdine: number;
+  oggetti: OrderItem[];
 }

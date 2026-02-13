@@ -1,30 +1,47 @@
-<div class="container mt-4 d-flex justify-content-center">
-  <div class="card p-4 profile-card">
-    <h2 class="text-center mb-4 text-secondary">Il mio Profilo</h2>
-
-    <div *ngIf="isLoading" class="text-center">
-      <div class="spinner-border text-primary" role="status"></div>
+<div class="container mt-5">
+  <div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+      <h3>Il Mio Profilo</h3>
     </div>
+    <div class="card-body" *ngIf="user">
 
-    <div *ngIf="!isLoading && user">
-      <div class="mb-3">
-        <label class="form-label fw-bold">Email</label>
-        <input type="text" class="form-control bg-light" [value]="user.email" disabled>
-      </div>
-      <div class="mb-3">
-        <label class="form-label fw-bold">Nome</label>
-        <input type="text" class="form-control" [(ngModel)]="user.nome">
-      </div>
-      <div class="mb-3">
-        <label class="form-label fw-bold">Cognome</label>
-        <input type="text" class="form-control" [(ngModel)]="user.cognome">
+      <div *ngIf="message" class="alert alert-info">{{ message }}</div>
+
+      <div *ngIf="!isEditing">
+        <p><strong>Nome:</strong> {{ user.nome }}</p>
+        <p><strong>Cognome:</strong> {{ user.cognome }}</p>
+        <p><strong>Email:</strong> {{ user.email }}</p>
+        <p><strong>Telefono:</strong> {{ user.telefono || 'Non specificato' }}</p>
+        <p><strong>Indirizzo Predefinito:</strong> {{ user.indirizzo || 'Non specificato' }}</p>
+
+        <button class="btn btn-warning me-2" (click)="toggleEdit()">Modifica Dati</button>
+        <button class="btn btn-danger" (click)="logout()">Logout</button>
       </div>
 
-      <div class="d-grid gap-2 mt-4">
-        <button class="btn btn-primary" (click)="save()">
-          <i class="bi bi-save me-2"></i>Salva Modifiche
-        </button>
+      <div *ngIf="isEditing">
+        <form (ngSubmit)="saveProfile()">
+          <div class="mb-3">
+            <label class="form-label">Nome</label>
+            <input type="text" class="form-control" [(ngModel)]="editData.nome" name="nome" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Cognome</label>
+            <input type="text" class="form-control" [(ngModel)]="editData.cognome" name="cognome" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Telefono</label>
+            <input type="text" class="form-control" [(ngModel)]="editData.telefono" name="telefono">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Indirizzo</label>
+            <textarea class="form-control" [(ngModel)]="editData.indirizzo" name="indirizzo" rows="2"></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-success me-2">Salva</button>
+          <button type="button" class="btn btn-secondary" (click)="toggleEdit()">Annulla</button>
+        </form>
       </div>
+
     </div>
   </div>
 </div>

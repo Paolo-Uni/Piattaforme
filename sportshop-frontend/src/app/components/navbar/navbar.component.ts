@@ -1,70 +1,48 @@
-import { Component, OnInit, signal, inject, NgZone } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
-import { KeycloakService } from 'keycloak-angular';
+import { RouterLink, RouterLinkActive } from '@angular/router';
+import { OAuthService } from 'angular-oauth2-oidc';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterLink, RouterLinkActive],
   templateUrl: './navbar.component.html',
+  styleUrls: ['./navbar.component.css']
 })
-export class NavbarComponent implements OnInit {
-  // Usiamo i signals per la reattività
-  loggedIn = signal(false);
-  username = signal('');
-  isAdmin = signal(false);
+export class NavbarComponent {
 
-  // Iniettiamo NgZone
-  private ngZone = inject(NgZone);
+  constructor(private oauthService: OAuthService) { }
 
-  constructor(private keycloak: KeycloakService) {}
+  // Getter per verificare se l'utente è loggato
+  get isLoggedIn(): boolean {
+    return this.oauthService.hasValidAccessToken();
+  }
 
-  async ngOnInit() {
-    // 1. Verifica lo stato del login (deve essere atteso con await)
-    const isLoggedIn = await this.keycloak.isLoggedIn();
-    console.log('--- NAVBAR INIT ---');
-    console.log('Is User Logged In?', isLoggedIn);
+  // Getter per ottenere il nome (opzionale, dal token)
+  get userName(): string {
+    const claims: any = this.oauthService.getIdentityClaims();
+    return claims ? claims['given_name'] : 'Utente';
+  }
 
-    if (isLoggedIn) {
-      try {
-        // 2. Carica il profilo utente
-        const profile = await this.keycloak.loadUserProfile();
-        console.log('Username:', profile.username);
-
-        // 3. FORZA L'AGGIORNAMENTO GRAFICO CON NGZONE
-        this.ngZone.run(() => {
-          this.loggedIn.set(true);
-          this.username.set(profile.username || '');
-          this.isAdmin.set(this.keycloak.isUserInRole('ADMIN'));
-        });
-
-      } catch (error) {
-        console.error('Errore caricamento profilo:', error);
-        this.ngZone.run(() => {
-          this.loggedIn.set(false);
-        });
-      }
-    } else {
-      // Reset stato
-      this.ngZone.run(() => {
-        this.loggedIn.set(false);
-        this.username.set('');
-      });
+  // Getter per verificare se è admin (controlla i ruoli nel token)
+  get isAdmin(): boolean {
+    const token = this.oauthService.getAccessToken();
+    if(!token) return false;
+    // Decodifica semplice del JWT per cercare realm_access.roles
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.realm_access?.roles?.includes('admin');
+    } catch(e) {
+      return false;
     }
   }
 
-  login() {
-    this.keycloak.login();
+  login(): void {
+    this.oauthService.initCodeFlow();
   }
 
-  register() {
-    this.keycloak.register({
-      redirectUri: window.location.origin
-    });
-  }
-
-  logout() {
-    this.keycloak.logout(window.location.origin);
+  logout(): void {
+    this.oauthService.logOut();
   }
 }

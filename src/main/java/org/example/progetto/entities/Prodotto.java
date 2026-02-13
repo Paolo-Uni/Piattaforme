@@ -1,7 +1,9 @@
 package org.example.progetto.entities;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
@@ -11,10 +13,12 @@ import java.math.BigDecimal;
         @UniqueConstraint(columnNames = {"nome", "categoria", "marca", "colore", "taglia"})
 })
 @Getter @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class Prodotto {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "prodotto_id", nullable = false)
     private Long id;
 

@@ -1,80 +1,61 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, ActivatedRoute } from '@angular/router'; // AGGIUNTO ActivatedRoute
-import { FormsModule } from '@angular/forms';
-import { ProductFilters, ProductService } from '../../services/product.service';
+import { ProductService } from '../../services/product.service';
 import { Product } from '../../models/product.model';
-import { CartService } from '../../services/cart.service';
-import { KeycloakService } from 'keycloak-angular';
+import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-product-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterLink, FormsModule],
   templateUrl: './product-list.component.html',
   styleUrls: ['./product-list.component.css']
 })
 export class ProductListComponent implements OnInit {
-  private readonly productService = inject(ProductService);
-  private readonly cartService = inject(CartService);
-  private readonly keycloak = inject(KeycloakService);
-  private readonly route = inject(ActivatedRoute); // INIEZIONE ROUTE
 
-  products = signal<Product[]>([]);
+  products: Product[] = [];
 
-  // Liste per i menu a tendina
-  marcheList = signal<string[]>([]);
-  categorieList = signal<string[]>([]);
-  taglieList = signal<string[]>([]);
-  coloriList = signal<string[]>([]);
+  marche: string[] = [];
+  categorie: string[] = [];
+  colori: string[] = [];
+  taglie: string[] = [];
 
-  filters: ProductFilters = { nome: '', marca: '', categoria: '', colore: '', taglia: '' };
+  // Inizializza con stringhe vuote. Il service ora gestisce la rimozione.
+  filters: any = {
+    nome: '',
+    marca: '',
+    categoria: '',
+    colore: '',
+    taglia: ''
+  };
+
+  constructor(private productService: ProductService) { }
 
   ngOnInit(): void {
-    // 1. Carica le opzioni per le tendine
-    this.loadFilters();
-
-    // 2. Ascolta i parametri dell'URL (es. ?marca=Nike dalla Home)
-    this.route.queryParams.subscribe(params => {
-      // Se c'è un parametro nell'URL, aggiorna il filtro, altrimenti usa stringa vuota
-      this.filters.marca = params['marca'] || '';
-      this.filters.categoria = params['categoria'] || '';
-
-      // Nota: Angular aggiornerà automaticamente il menu a tendina (select)
-      // perché è legato con [(ngModel)]="filters.marca"
-
-      // 3. Carica i prodotti con i filtri applicati
-      this.loadProducts();
-    });
+    this.loadFilterOptions();
+    this.search(); // Carica subito i prodotti
   }
 
-  loadFilters() {
-    this.productService.getMarche().subscribe(data => this.marcheList.set(data));
-    this.productService.getCategorie().subscribe(data => this.categorieList.set(data));
-    this.productService.getTaglie().subscribe(data => this.taglieList.set(data));
-    this.productService.getColori().subscribe(data => this.coloriList.set(data));
+  loadFilterOptions(): void {
+    this.productService.getMarche().subscribe(data => this.marche = data);
+    this.productService.getCategorie().subscribe(data => this.categorie = data);
+    this.productService.getColori().subscribe(data => this.colori = data);
+    this.productService.getTaglie().subscribe(data => this.taglie = data);
   }
 
-  loadProducts() {
-    const activeFilters = { ...this.filters };
-
-    this.productService.searchProducts(activeFilters).subscribe({
-      next: (response) => {
-        this.products.set(response.content);
+  search(): void {
+    this.productService.searchProducts(this.filters).subscribe({
+      next: (data) => {
+        // Gestisce sia la risposta impaginata (data.content) che lista semplice
+        this.products = data.content ? data.content : data;
       },
-      error: (err) => console.error('Errore nel caricamento prodotti', err)
+      error: (err) => console.error('Errore nel caricamento prodotti:', err)
     });
   }
 
-  addToCart(p: Product) {
-    if (!this.keycloak.isLoggedIn()) {
-      this.keycloak.login();
-      return;
-    }
-
-    this.cartService.addToCart(p.id, 1).subscribe({
-      next: () => alert('Aggiunto al carrello!'),
-      error: (err) => alert('Errore: ' + (err.error?.message || 'Impossibile aggiungere'))
-    });
+  resetFilters(): void {
+    this.filters = { nome: '', marca: '', categoria: '', colore: '', taglia: '' };
+    this.search();
   }
 }

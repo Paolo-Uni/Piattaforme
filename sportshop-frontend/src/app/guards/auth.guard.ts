@@ -1,28 +1,16 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router } from '@angular/router';
-import { KeycloakService } from 'keycloak-angular';
+import { CanActivateFn } from '@angular/router';
+import { OAuthService } from 'angular-oauth2-oidc';
 
-export const AuthGuard: CanActivateFn = async (route, state) => {
-  const keycloak = inject(KeycloakService);
-  const router = inject(Router);
+export const authGuard: CanActivateFn = (route, state) => {
+  const oauthService = inject(OAuthService);
 
-  // Verifica se l'utente è loggato
-  const loggedIn = keycloak.isLoggedIn();
-
-  if (loggedIn) {
-    // Controllo Ruoli (se definiti nella rotta)
-    const requiredRoles = route.data['roles'] as string[];
-    if (requiredRoles && requiredRoles.length > 0) {
-      const hasRole = requiredRoles.some(role => keycloak.getUserRoles().includes(role));
-      return hasRole;
-    }
+  // Verifica se l'utente ha un token valido
+  if (oauthService.hasValidAccessToken()) {
     return true;
+  } else {
+    // Se non è loggato, avvia il flusso di login e blocca la navigazione
+    oauthService.initCodeFlow();
+    return false;
   }
-
-  // Se non è loggato, avvia il login
-  await keycloak.login({
-    redirectUri: window.location.origin + state.url
-  });
-
-  return false;
 };

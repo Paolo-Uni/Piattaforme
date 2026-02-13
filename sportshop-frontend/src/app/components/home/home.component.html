@@ -1,42 +1,26 @@
-<div class="container d-flex flex-column justify-content-center p-3" style="height: calc(100vh - 70px); overflow: hidden;">
-
-  <div class="p-4 mb-3 bg-light rounded-3 shadow-sm flex-fill d-flex align-items-center justify-content-center">
-    <div class="text-center w-100">
-      <h1 class="display-6 fw-bold text-primary">Benvenuto su SportShop</h1>
-      <p class="fs-5 text-secondary mx-auto" style="max-width: 700px;">
-        Trova i migliori brand al miglior prezzo.
-      </p>
-      <button class="btn btn-primary btn-lg mt-2" type="button" routerLink="/products">
-        <i class="bi bi-cart4 me-2"></i> Vai al Catalogo
-      </button>
-    </div>
+<div class="p-5 mb-4 bg-light rounded-3 jumbotron-custom">
+  <div class="container-fluid py-5">
+    <h1 class="display-5 fw-bold">Benvenuto su SportShop</h1>
+    <p class="col-md-8 fs-4">Il miglior equipaggiamento sportivo a portata di click. Scopri le nostre offerte su abbigliamento, scarpe e accessori.</p>
+    <a class="btn btn-primary btn-lg" routerLink="/prodotti" role="button">Vai allo Shop</a>
   </div>
+</div>
 
-  <div class="row g-3 flex-fill" style="min-height: 0;">
-
-    <div class="col-md-6 h-100">
-      <div class="h-100 p-4 text-bg-dark rounded-3 shadow d-flex flex-column justify-content-center align-items-center text-center">
-        <h2>Novità Nike</h2>
-        <p class="small text-white-50">La nuova collezione esclusiva.</p>
-        <button
-          class="btn btn-outline-light mt-2"
-          type="button"
-          [routerLink]="['/products']"
-          [queryParams]="{ marca: 'Nike' }">
-          Scopri Nike
-        </button>
+<div class="container">
+  <div class="row align-items-md-stretch">
+    <div class="col-md-6 mb-4">
+      <div class="h-100 p-5 text-white bg-dark rounded-3">
+        <h2>Nuovi Arrivi</h2>
+        <p>Scopri le ultime collezioni per la stagione. Qualità e stile per le tue performance migliori.</p>
+        <a class="btn btn-outline-light" routerLink="/prodotti">Vedi novità</a>
       </div>
     </div>
-
-    <div class="col-md-6 h-100">
-      <div class="h-100 p-4 bg-white border rounded-3 shadow-sm d-flex flex-column justify-content-center align-items-center text-center">
-        <h2>I tuoi Ordini</h2>
-        <p class="small text-muted">Controlla lo stato delle tue spedizioni.</p>
-        <button class="btn btn-outline-secondary mt-2" type="button" routerLink="/orders">
-          Vai agli Ordini
-        </button>
+    <div class="col-md-6 mb-4">
+      <div class="h-100 p-5 bg-light border rounded-3">
+        <h2>Il tuo Profilo</h2>
+        <p>Gestisci i tuoi ordini, controlla le spedizioni e aggiorna i tuoi dati personali in un unico posto.</p>
+        <a class="btn btn-outline-secondary" routerLink="/profilo">Vai al profilo</a>
       </div>
     </div>
-
   </div>
 </div>

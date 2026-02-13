@@ -1,7 +1,12 @@
 package org.example.progetto.support;
 
-/**
- * Record utilizzato per inviare risposte JSON standardizzate
- * (es. Messaggi di errore o conferme di successo).
- */
-public record ResponseMessage(String message) { }
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class ResponseMessage {
+    private String message;
+}

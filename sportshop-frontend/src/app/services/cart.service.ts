@@ -1,41 +1,54 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { CartItem } from '../models/cart.model'; // Assicurati che il modello esista
+import { CartItem } from '../models/cart.model';
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root'
+})
 export class CartService {
-  // Assicurati che la porta corrisponda al tuo backend (8080 o 8082)
+
   private apiUrl = 'http://localhost:8082/carrello';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   addToCart(idProdotto: number, quantita: number): Observable<any> {
-    // FIX: Il backend usa @RequestParam, quindi usiamo HttpParams
     const params = new HttpParams()
       .set('idProdotto', idProdotto.toString())
       .set('quantita', quantita.toString());
 
-    // Passiamo 'null' come body perché i dati sono nei params
     return this.http.post(`${this.apiUrl}/aggiungi`, null, { params });
   }
 
-  getCartItems(): Observable<CartItem[]> {
-    return this.http.get<CartItem[]>(`${this.apiUrl}/items`);
+  getCart(): Observable<CartItem[]> {
+    return this.http.get<CartItem[]>(`${this.apiUrl}/vedi`);
   }
 
-  incrementQuantity(idProdotto: number): Observable<any> {
+  // Decrementa quantità (tasto -)
+  decreaseQuantity(idProdotto: number): Observable<any> {
     const params = new HttpParams().set('idProdotto', idProdotto.toString());
-    return this.http.put(`${this.apiUrl}/plus`, null, { params });
+    return this.http.post(`${this.apiUrl}/rimuovi`, null, { params });
   }
 
-  decrementQuantity(idProdotto: number): Observable<any> {
+  // Incrementa quantità (tasto +)
+  increaseQuantity(idProdotto: number): Observable<any> {
     const params = new HttpParams().set('idProdotto', idProdotto.toString());
-    return this.http.put(`${this.apiUrl}/minus`, null, { params });
+    return this.http.post(`${this.apiUrl}/aumenta`, null, { params });
   }
 
-  checkout(indirizzo: string): Observable<any> {
-    const params = new HttpParams().set('indirizzoSpedizione', indirizzo);
-    return this.http.post(`${this.apiUrl}/ordina`, null, { params });
+  // NUOVO: Rimuove totalmente il prodotto dal carrello (tasto Cestino)
+  removeItem(idProdotto: number): Observable<any> {
+    const params = new HttpParams().set('idProdotto', idProdotto.toString());
+    return this.http.delete(`${this.apiUrl}/elimina-prodotto`, { params });
+  }
+
+  clearCart(): Observable<any> {
+    return this.http.post(`${this.apiUrl}/svuota`, {});
+  }
+
+  // Modificato: Ora invia un JSON body { "indirizzoSpedizione": "..." }
+  checkout(indirizzoSpedizione: string): Observable<any> {
+    const body = { indirizzoSpedizione: indirizzoSpedizione };
+    return this.http.post(`${this.apiUrl}/ordina`, body);
   }
 }

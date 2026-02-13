@@ -2,12 +2,12 @@ package org.example.progetto.services;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
+import lombok.RequiredArgsConstructor;
 import org.example.progetto.dto.OggettoCarrelloDTO;
 import org.example.progetto.entities.*;
 import org.example.progetto.exceptions.*;
 import org.example.progetto.repositories.*;
 import org.example.progetto.support.StatoOrdine;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,18 +18,19 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Service
+@RequiredArgsConstructor
 public class CarrelloService {
 
-    @Autowired private CarrelloRepository carrelloRepository;
-    @Autowired private ClienteRepository clienteRepository;
-    @Autowired private ProdottoRepository prodottoRepository;
-    @Autowired private OrdineRepository ordineRepository;
-    @Autowired private TransazioneRepository transazioneRepository;
-    @Autowired private SpedizioneRepository spedizioneRepository;
-    @Autowired private OggettoCarrelloRepository oggettoCarrelloRepository;
-    @Autowired private OggettoOrdineRepository oggettoOrdineRepository;
-    @Autowired private EntityManager entityManager;
-    
+    private final CarrelloRepository carrelloRepository;
+    private final ClienteRepository clienteRepository;
+    private final ProdottoRepository prodottoRepository;
+    private final OrdineRepository ordineRepository;
+    private final TransazioneRepository transazioneRepository;
+    private final SpedizioneRepository spedizioneRepository;
+    private final OggettoCarrelloRepository oggettoCarrelloRepository;
+    private final OggettoOrdineRepository oggettoOrdineRepository;
+    private final EntityManager entityManager;
+
     private static final Random RANDOM = new Random();
 
     @Transactional
@@ -44,22 +45,25 @@ public class CarrelloService {
                     c.setTotaleCarrello(BigDecimal.ZERO);
                     return carrelloRepository.save(c);
                 });
-        
-        entityManager.refresh(carrello); 
+
+        // Lock sul carrello per evitare accessi concorrenti
+        entityManager.refresh(carrello);
         entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
 
         Prodotto prod = prodottoRepository.findById(idProdotto)
                 .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
 
         if (quantita > prod.getStock()) {
-            throw new InvalidQuantityException("Quantità non disponibile");
+            throw new InvalidQuantityException("Quantità richiesta superiore allo stock disponibile");
         }
 
         OggettoCarrello oggetto = oggettoCarrelloRepository.findByCarrelloAndProdotto(carrello, prod);
         if (oggetto != null) {
             entityManager.lock(oggetto, LockModeType.PESSIMISTIC_WRITE);
             int nuovaQuantita = oggetto.getQuantita() + quantita;
-            if (nuovaQuantita > prod.getStock()) throw new InvalidQuantityException("Quantità totale superiore alla disponibilità");
+            if (nuovaQuantita > prod.getStock()) {
+                throw new InvalidQuantityException("Quantità totale nel carrello superiore alla disponibilità");
+            }
             oggetto.setQuantita(nuovaQuantita);
             oggettoCarrelloRepository.save(oggetto);
         } else {
@@ -80,18 +84,20 @@ public class CarrelloService {
 
         Carrello carrello = carrelloRepository.findByCliente(cliente)
                 .orElseThrow(() -> new InvalidCartOperationException("Carrello non trovato."));
-        
+
         entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
 
         Prodotto prod = prodottoRepository.findById(idProdotto)
                 .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
-                
+
         OggettoCarrello oggetto = oggettoCarrelloRepository.findByCarrelloAndProdotto(carrello, prod);
-        if (oggetto == null) throw new ProductNotFoundException("Prodotto non nel carrello.");
-        
+        if (oggetto == null) throw new ProductNotFoundException("Prodotto non presente nel carrello.");
+
         entityManager.lock(oggetto, LockModeType.PESSIMISTIC_WRITE);
-        if (oggetto.getQuantita() + 1 > prod.getStock()) throw new InvalidQuantityException("Quantità non disponibile");
-        
+        if (oggetto.getQuantita() + 1 > prod.getStock()) {
+            throw new InvalidQuantityException("Stock insufficiente per incrementare la quantità");
+        }
+
         oggetto.setQuantita(oggetto.getQuantita() + 1);
         oggettoCarrelloRepository.save(oggetto);
         aggiornaTotaleCarrello(carrello);
@@ -104,15 +110,15 @@ public class CarrelloService {
 
         Carrello carrello = carrelloRepository.findByCliente(cliente)
                 .orElseThrow(() -> new InvalidCartOperationException("Carrello non trovato."));
-        
+
         entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
 
         Prodotto prodotto = prodottoRepository.findById(idProdotto)
                 .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
-                
+
         OggettoCarrello oggetto = oggettoCarrelloRepository.findByCarrelloAndProdotto(carrello, prodotto);
         if (oggetto == null) throw new InvalidCartOperationException("Prodotto non nel carrello.");
-        
+
         entityManager.lock(oggetto, LockModeType.PESSIMISTIC_WRITE);
         if (oggetto.getQuantita() > 1) {
             oggetto.setQuantita(oggetto.getQuantita() - 1);
@@ -122,6 +128,32 @@ public class CarrelloService {
         }
         aggiornaTotaleCarrello(carrello);
     }
+
+    // --- NUOVO METODO AGGIUNTO ---
+    @Transactional
+    public void rimuoviProdottoDalCarrello(String email, Long idProdotto) {
+        Cliente cliente = clienteRepository.findByEmail(email)
+                .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato!"));
+
+        Carrello carrello = carrelloRepository.findByCliente(cliente)
+                .orElseThrow(() -> new InvalidCartOperationException("Carrello non trovato."));
+
+        entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
+
+        Prodotto prodotto = prodottoRepository.findById(idProdotto)
+                .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
+
+        OggettoCarrello oggetto = oggettoCarrelloRepository.findByCarrelloAndProdotto(carrello, prodotto);
+        if (oggetto != null) {
+            oggettoCarrelloRepository.delete(oggetto);
+            // Facciamo flush per assicurare che la delete venga processata prima del ricalcolo
+            entityManager.flush(); 
+            aggiornaTotaleCarrello(carrello);
+        } else {
+            throw new ProductNotFoundException("Il prodotto non è presente nel carrello.");
+        }
+    }
+    // -----------------------------
 
     @Transactional
     public void svuotaCarrello(String email) {
@@ -138,7 +170,8 @@ public class CarrelloService {
 
     @Transactional
     public void aggiornaTotaleCarrello(Carrello carrello) {
-        Set<OggettoCarrello> oggetti = new HashSet<>(oggettoCarrelloRepository.findByCarrello(carrello));
+        // Ricarichiamo gli oggetti per essere sicuri di avere i dati aggiornati
+        List<OggettoCarrello> oggetti = oggettoCarrelloRepository.findByCarrello(carrello);
         BigDecimal totale = BigDecimal.ZERO;
         for (OggettoCarrello oc : oggetti) {
             BigDecimal riga = oc.getProdotto().getPrezzo().multiply(BigDecimal.valueOf(oc.getQuantita()));
@@ -155,16 +188,19 @@ public class CarrelloService {
 
         Carrello carrello = carrelloRepository.findByCliente(cliente)
                 .orElseThrow(() -> new InvalidCartOperationException("Carrello non trovato."));
-        
+
         entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
 
-        Set<OggettoCarrello> prodottiCarrello = oggettoCarrelloRepository.findByCarrello(carrello);
+        List<OggettoCarrello> prodottiCarrello = oggettoCarrelloRepository.findByCarrello(carrello);
         if (prodottiCarrello.isEmpty()) throw new InvalidCartOperationException("Carrello vuoto.");
 
+        // Verifica e aggiornamento Stock atomico
         for (OggettoCarrello oc : prodottiCarrello) {
             Prodotto p = oc.getProdotto();
             entityManager.lock(p, LockModeType.PESSIMISTIC_WRITE);
-            if (p.getStock() < oc.getQuantita()) throw new InvalidQuantityException("Stock insufficiente per: " + p.getNome());
+            if (p.getStock() < oc.getQuantita()) {
+                throw new InvalidQuantityException("Stock insufficiente per il prodotto: " + p.getNome());
+            }
             p.setStock(p.getStock() - oc.getQuantita());
             prodottoRepository.save(p);
         }
@@ -174,7 +210,6 @@ public class CarrelloService {
         Ordine ordine = new Ordine();
         ordine.setCliente(cliente);
         ordine.setDataOrdine(LocalDateTime.now());
-        // UPDATE: Uso Enum
         ordine.setStato(StatoOrdine.IN_ATTESA_DI_PAGAMENTO);
         ordine.setTotale(totaleOrdine);
         ordine = ordineRepository.save(ordine);
@@ -187,15 +222,14 @@ public class CarrelloService {
         if (processaPagamento(totaleOrdine)) {
             transazione.setEsito(true);
             transazioneRepository.save(transazione);
-            
-            // UPDATE: Uso Enum
             ordine.setStato(StatoOrdine.PAGAMENTO_COMPLETATO);
-            
+
             for (OggettoCarrello oc : prodottiCarrello) {
                 OggettoOrdine oo = new OggettoOrdine();
                 oo.setNomeProdotto(oc.getProdotto().getNome());
                 oo.setTaglia(oc.getProdotto().getTaglia());
                 oo.setColore(oc.getProdotto().getColore());
+                oo.setDescrizione(oc.getProdotto().getDescrizione());
                 oo.setPrezzo(oc.getProdotto().getPrezzo());
                 oo.setQuantita(oc.getQuantita());
                 oo.setOrdine(ordine);
@@ -206,22 +240,24 @@ public class CarrelloService {
             spedizione.setOrdine(ordine);
             spedizione.setIndirizzoSpedizione(indirizzoSpedizione);
             spedizione.setDataPrevista(Instant.now().plus(7, ChronoUnit.DAYS));
-            spedizione.setStato("In preparazione"); // Spedizione ha ancora stato String, ok.
+            spedizione.setStato("In preparazione");
             spedizioneRepository.save(spedizione);
             ordine.setSpedizione(spedizione);
 
             ordineRepository.save(ordine);
 
+            // Pulizia carrello dopo ordine riuscito
             oggettoCarrelloRepository.deleteAllByCarrello(carrello);
             carrello.setTotaleCarrello(BigDecimal.ZERO);
             carrelloRepository.save(carrello);
         } else {
-            // Pagamento fallito -> Rollback automatico
+            // Se il pagamento fallisce, l'eccezione farà rollback anche dello stock
             throw new PaymentException("Il pagamento è stato rifiutato.");
         }
     }
 
     private boolean processaPagamento(BigDecimal amount) {
+        // Simulazione pagamento (80% successo)
         return amount.compareTo(BigDecimal.ZERO) > 0 && RANDOM.nextInt(100) < 80;
     }
 
@@ -229,11 +265,11 @@ public class CarrelloService {
     public List<OggettoCarrelloDTO> getCartItemsByEmail(String email) {
         Cliente cliente = clienteRepository.findByEmail(email)
                 .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato!"));
-        
+
         Carrello carrello = carrelloRepository.findByCliente(cliente).orElse(null);
         if (carrello == null) return new ArrayList<>();
 
-        Set<OggettoCarrello> oggetti = oggettoCarrelloRepository.findByCarrello(carrello);
+        List<OggettoCarrello> oggetti = oggettoCarrelloRepository.findByCarrello(carrello);
         List<OggettoCarrelloDTO> dtos = new ArrayList<>();
         for (OggettoCarrello oc : oggetti) {
             OggettoCarrelloDTO dto = new OggettoCarrelloDTO();

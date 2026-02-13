@@ -7,41 +7,44 @@ import { Order } from '../../models/order.model';
   selector: 'app-order-list',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './order-list.component.html'
+  templateUrl: './order-list.component.html',
+  styleUrls: ['./order-list.component.css']
 })
 export class OrderListComponent implements OnInit {
+
   orders: Order[] = [];
-  loading = true;
+  errorMessage: string = '';
+  infoMessage: string = '';
 
-  constructor(private orderService: OrderService) {}
+  constructor(private orderService: OrderService) { }
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.loadOrders();
   }
 
-  loadOrders() {
+  loadOrders(): void {
     this.orderService.getMyOrders().subscribe({
-      next: (data) => {
-        this.orders = data;
-        this.loading = false;
-      },
-      error: (err) => {
-        console.error(err);
-        this.loading = false;
-      }
+      next: (data) => this.orders = data,
+      error: (err) => this.errorMessage = 'Errore caricamento ordini.'
     });
   }
 
-  cancel(id: number) {
+  cancelOrder(orderId: number): void {
+    // Prompt semplice per chiedere il motivo
     const motivo = prompt("Inserisci il motivo dell'annullamento:");
-    if (motivo) {
-      this.orderService.cancelOrder(id, motivo).subscribe({
-        next: () => {
-          alert('Ordine annullato con successo.');
+
+    if (motivo !== null && motivo.trim() !== "") {
+      this.orderService.cancelOrder(orderId, motivo).subscribe({
+        next: (res) => {
+          this.infoMessage = 'Ordine annullato con successo. Il rimborso è in elaborazione.';
           this.loadOrders(); // Ricarica la lista per vedere lo stato aggiornato
         },
-        error: (err) => alert('Errore: ' + (err.error?.message || err.message))
+        error: (err) => {
+          this.errorMessage = err.error.message || 'Errore durante l\'annullamento.';
+        }
       });
+    } else if (motivo === "") {
+      alert("Il motivo è obbligatorio per annullare l'ordine.");
     }
   }
 }

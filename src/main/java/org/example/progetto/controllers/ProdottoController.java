@@ -1,11 +1,11 @@
 package org.example.progetto.controllers;
 
+import lombok.RequiredArgsConstructor;
+import org.example.progetto.support.ResponseMessage;
 import org.example.progetto.entities.Prodotto;
 import org.example.progetto.exceptions.ProductAlreadyExistsException;
 import org.example.progetto.exceptions.ProductNotFoundException;
 import org.example.progetto.services.ProdottoService;
-import org.example.progetto.support.ResponseMessage;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -18,82 +18,114 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/prodotto")
+@RequestMapping("/prodotti")
+@RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:4200")
 public class ProdottoController {
 
-    @Autowired
-    private ProdottoService prodottoService;
+    private final ProdottoService prodottoService;
 
-    @GetMapping("/marche")
-    public List<String> getMarche() {
-        return prodottoService.getAllMarche();
+    @GetMapping("/all")
+    public ResponseEntity<List<Prodotto>> getAllProdotti() {
+        return ResponseEntity.ok(prodottoService.getProdotti());
     }
 
-    @GetMapping("/categorie")
-    public List<String> getCategorie() {
-        return prodottoService.getAllCategorie();
+    @GetMapping("/paged")
+    public ResponseEntity<List<Prodotto>> getAllProdottiPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "nome") String sortBy) {
+        return ResponseEntity.ok(prodottoService.getProdotti(page, size, sortBy));
     }
 
-    @GetMapping("/taglie")
-    public List<String> getTaglie() {
-        return prodottoService.getAllTaglie();
-    }
-
-    @GetMapping("/colori")
-    public List<String> getColori() {
-        return prodottoService.getAllColori();
-    }
-
-    @GetMapping("/search")
+    @GetMapping("/cerca")
     public ResponseEntity<Page<Prodotto>> ricercaDinamica(
             @RequestParam(required = false) String nome,
             @RequestParam(required = false) String marca,
             @RequestParam(required = false) String categoria,
             @RequestParam(required = false) String colore,
             @RequestParam(required = false) String taglia,
-            @RequestParam(defaultValue = "0") int pageNumber,
-            @RequestParam(defaultValue = "10") int pageSize,
-            @RequestParam(defaultValue = "id") String sortBy
-    ) {
-        Pageable paging = PageRequest.of(pageNumber, pageSize, Sort.by(sortBy));
-        return ResponseEntity.ok(prodottoService.ricercaDinamica(nome, marca, categoria, colore, taglia, paging));
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "nome") String sortBy) {
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy));
+        return ResponseEntity.ok(prodottoService.ricercaDinamica(nome, marca, categoria, colore, taglia, pageable));
+    }
+    
+    // Endpoint di utilità per i filtri nel frontend
+    @GetMapping("/marche")
+    public ResponseEntity<List<String>> getMarche() {
+        return ResponseEntity.ok(prodottoService.getAllMarche());
+    }
+    
+    @GetMapping("/categorie")
+    public ResponseEntity<List<String>> getCategorie() {
+        return ResponseEntity.ok(prodottoService.getAllCategorie());
+    }
+
+    @GetMapping("/colori")
+    public ResponseEntity<List<String>> getColori() {
+        return ResponseEntity.ok(prodottoService.getAllColori());
+    }
+
+    @GetMapping("/taglie")
+    public ResponseEntity<List<String>> getTaglie() {
+        return ResponseEntity.ok(prodottoService.getAllTaglie());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getProdotto(@PathVariable("id") Long id) {
+    public ResponseEntity<?> getProdotto(@PathVariable Long id) {
         try {
             return ResponseEntity.ok(prodottoService.getProdottoById(id));
         } catch (ProductNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseMessage("Prodotto non trovato"));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseMessage(e.getMessage()));
         }
     }
 
+    // --- SEZIONE ADMIN ---
+
+    @PostMapping("/admin/aggiungi")
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/create")
-    public ResponseEntity<?> aggiungiProdotto(@RequestBody Prodotto prod) {
+    public ResponseEntity<?> aggiungiProdotto(@RequestBody Prodotto prodotto) {
         try {
-            prodottoService.aggiungiProdotto(prod);
-            return ResponseEntity.ok(new ResponseMessage("Prodotto aggiunto"));
+            prodottoService.aggiungiProdotto(prodotto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(new ResponseMessage("Prodotto aggiunto con successo"));
         } catch (ProductAlreadyExistsException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(new ResponseMessage(e.getMessage()));
         }
     }
 
+    @DeleteMapping("/admin/elimina/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/delete")
-    public ResponseEntity<?> cancellaProdotto(@RequestParam Long idProdotto) {
+    public ResponseEntity<ResponseMessage> cancellaProdotto(@PathVariable Long id) {
         try {
-            prodottoService.cancellaProdotto(idProdotto);
-            return ResponseEntity.ok(new ResponseMessage("Cancellato"));
+            prodottoService.cancellaProdotto(id);
+            return ResponseEntity.ok(new ResponseMessage("Prodotto eliminato"));
         } catch (ProductNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseMessage("Non trovato"));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseMessage(e.getMessage()));
         }
     }
 
+    @PostMapping("/admin/stock/aumenta")
     @PreAuthorize("hasRole('ADMIN')")
-    @PatchMapping("/add-stock")
-    public ResponseEntity<?> aumentaStock(@RequestParam Long idProdotto, @RequestParam Integer quantita) {
-        prodottoService.aumentaQuantitaProdotto(idProdotto, quantita);
-        return ResponseEntity.ok(new ResponseMessage("Stock aggiornato"));
+    public ResponseEntity<ResponseMessage> aumentaStock(@RequestParam Long id, @RequestParam int quantita) {
+        try {
+            prodottoService.aumentaQuantitaProdotto(id, quantita);
+            return ResponseEntity.ok(new ResponseMessage("Stock aggiornato"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ResponseMessage(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/admin/stock/diminuisci")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseMessage> diminuisciStock(@RequestParam Long id, @RequestParam int quantita) {
+        try {
+            prodottoService.diminuisciQuantitaProdotto(id, quantita);
+            return ResponseEntity.ok(new ResponseMessage("Stock aggiornato"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ResponseMessage(e.getMessage()));
+        }
     }
 }

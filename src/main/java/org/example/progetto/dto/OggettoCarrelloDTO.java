@@ -1,16 +1,19 @@
 package org.example.progetto.dto;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.math.BigDecimal;
 
-@Getter
-@Setter
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class OggettoCarrelloDTO {
     private Long idProdotto;
-    private String nomeProdotto; // Aggiunto
-    private BigDecimal prezzoUnitario; // Aggiunto
-    private String colore; // Aggiunto
-    private String taglia; // Aggiunto
+    private String nomeProdotto;
+    private BigDecimal prezzoUnitario;
+    private String colore;
+    private String taglia;
     private Integer quantita;
 }

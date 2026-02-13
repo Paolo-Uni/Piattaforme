@@ -2,6 +2,7 @@ package org.example.progetto.services;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
+import lombok.RequiredArgsConstructor;
 import org.example.progetto.dto.OggettoOrdineDTO;
 import org.example.progetto.dto.OrdineDTO;
 import org.example.progetto.entities.*;
@@ -11,7 +12,6 @@ import org.example.progetto.repositories.ClienteRepository;
 import org.example.progetto.repositories.OggettoOrdineRepository;
 import org.example.progetto.repositories.OrdineRepository;
 import org.example.progetto.support.StatoOrdine;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,62 +21,57 @@ import java.util.List;
 import java.util.Random;
 
 @Service
+@RequiredArgsConstructor
 public class OrdineService {
 
     private static final Random RANDOM = new Random();
 
-    @Autowired
-    private EntityManager entityManager;
-
-    @Autowired
-    private OrdineRepository ordineRepository;
-
-    @Autowired
-    private ClienteRepository clienteRepository;
-
-    @Autowired
-    private OggettoOrdineRepository oggettoOrdineRepository;
+    private final EntityManager entityManager;
+    private final OrdineRepository ordineRepository;
+    private final ClienteRepository clienteRepository;
+    private final OggettoOrdineRepository oggettoOrdineRepository;
 
     @Transactional
-    public void annullaOrdine(Cliente cDetached, Ordine oDetached, String motivo) {
-        Cliente c = clienteRepository.findById(cDetached.getId())
+    public void annullaOrdine(Long idOrdine, String emailCliente, String motivo) {
+        Cliente cliente = clienteRepository.findByEmail(emailCliente)
                 .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato"));
         
-        entityManager.lock(c, LockModeType.PESSIMISTIC_WRITE);
+        // Lock ottimistico o pessimistico sul cliente non strettamente necessario qui se non modifichiamo il saldo, 
+        // ma utile se avessimo logica di wallet.
 
-        Ordine o = ordineRepository.findById(oDetached.getId())
+        Ordine ordine = ordineRepository.findById(idOrdine)
                 .orElseThrow(() -> new InvalidOperationException("Ordine non trovato"));
         
-        entityManager.lock(o, LockModeType.PESSIMISTIC_WRITE);
+        entityManager.lock(ordine, LockModeType.PESSIMISTIC_WRITE);
 
-        if (!o.getCliente().getId().equals(c.getId())) {
+        if (!ordine.getCliente().getId().equals(cliente.getId())) {
             throw new InvalidOperationException("L'ordine non appartiene all'utente specificato.");
         }
 
-        // UPDATE: Controllo tramite Enum
-        StatoOrdine statoAttuale = o.getStato();
+        StatoOrdine statoAttuale = ordine.getStato();
         if (statoAttuale == StatoOrdine.ANNULLATO || statoAttuale == StatoOrdine.SPEDITO) {
             throw new InvalidOperationException("Impossibile annullare l'ordine nello stato attuale: " + statoAttuale);
         }
 
-        Spedizione sped = o.getSpedizione();
+        Spedizione sped = ordine.getSpedizione();
         if (sped != null) {
+            // Lock sulla spedizione per evitare che venga marcata come spedita mentre annulliamo
             entityManager.lock(sped, LockModeType.PESSIMISTIC_WRITE);
             sped.setStato("Annullata a seguito di cancellazione ordine");
         }
 
-        // UPDATE: Setto stato Enum e salvo il motivo nelle note
-        o.setStato(StatoOrdine.ANNULLATO);
-        o.setNote("Motivo annullamento: " + motivo);
-        ordineRepository.save(o);
+        ordine.setStato(StatoOrdine.ANNULLATO);
+        ordine.setNote("Motivo annullamento: " + motivo);
+        ordineRepository.save(ordine);
 
         try {
-            processaRimborso(o);
+            processaRimborso(ordine);
         } catch (Exception e) {
-            System.err.println("Fallimento rimborso per ordine " + o.getId() + ": " + e.getMessage());
-            // UPDATE: Aggiorno le note per segnalare l'errore
-            o.setNote(o.getNote() + " | ERRORE: Rimborso FALLITO, contattare assistenza.");
-            ordineRepository.save(o);
+            System.err.println("Fallimento rimborso per ordine " + ordine.getId() + ": " + e.getMessage());
+            ordine.setNote(ordine.getNote() + " | ERRORE: Rimborso FALLITO, contattare assistenza.");
+            ordineRepository.save(ordine);
+            // Non rilanciamo l'eccezione per non fare rollback dello stato ANNULLATO, 
+            // ma in un sistema reale questo andrebbe gestito con code o job asincroni.
         }
     }
 
@@ -91,13 +86,16 @@ public class OrdineService {
             entityManager.lock(transazione, LockModeType.PESSIMISTIC_WRITE);
             return transazione.getImporto();
         } else {
-            throw new InvalidOperationException("Nessuna transazione completata trovata per questo ordine.");
+            // Se non c'è transazione (es. Pagamento alla consegna non ancora avvenuto), rimborso è 0
+            return BigDecimal.ZERO; 
         }
     }
 
     private void simulaRimborso(BigDecimal importo) {
+        if (importo.compareTo(BigDecimal.ZERO) == 0) return;
+        
         System.out.println("Richiesta rimborso inviata al gateway. Importo: " + importo);
-        boolean rimborsoSuccesso = RANDOM.nextInt(100) < 90;
+        boolean rimborsoSuccesso = RANDOM.nextInt(100) < 90; // 90% successo
 
         if (rimborsoSuccesso) {
             System.out.println("Rimborso confermato dal gateway.");
@@ -118,8 +116,7 @@ public class OrdineService {
             OrdineDTO dto = new OrdineDTO();
             dto.setIdOrdine(ordine.getId());
             dto.setData(ordine.getDataOrdine());
-            // UPDATE: Converto l'Enum in Stringa per il DTO
-            dto.setStato(ordine.getStato().toString()); 
+            dto.setStato(ordine.getStato().toString());
             dto.setTotaleOrdine(ordine.getTotale());
 
             List<OggettoOrdine> prodottiOrdinati = oggettoOrdineRepository.findByOrdine(ordine);

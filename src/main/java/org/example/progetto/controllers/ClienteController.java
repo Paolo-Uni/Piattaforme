@@ -1,70 +1,90 @@
 package org.example.progetto.controllers;
 
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.example.progetto.dto.ClienteDTO;
 import org.example.progetto.dto.ClienteUpdateRequest;
 import org.example.progetto.dto.Request;
-import org.example.progetto.entities.Cliente;
-import org.example.progetto.services.ClienteService;
 import org.example.progetto.support.ResponseMessage;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.example.progetto.entities.Cliente;
+import org.example.progetto.exceptions.ClienteNotFoundException;
+import org.example.progetto.exceptions.CredentialsAlreadyExistException;
+import org.example.progetto.services.ClienteService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
+import java.util.List;
 
 @RestController
-@RequestMapping("/clienti")
+@RequestMapping("/cliente")
+@RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:4200")
 public class ClienteController {
 
-    @Autowired
-    private ClienteService clienteService;
+    private final ClienteService clienteService;
 
-    @PostMapping("/registrazione")
-    public ResponseEntity<?> registra(@RequestBody @Valid Request request) {
+    @PostMapping("/registra")
+    public ResponseEntity<?> registraCliente(@Valid @RequestBody Request request) {
         try {
-            return ResponseEntity.ok(clienteService.registraCliente(request));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ResponseMessage(e.getMessage()));
+            ClienteDTO nuovoCliente = clienteService.registraCliente(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(nuovoCliente);
+        } catch (CredentialsAlreadyExistException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(new ResponseMessage(e.getMessage()));
         }
     }
 
-    @PreAuthorize("isAuthenticated()")
+    // Endpoint per ottenere i dati del PROFILO loggato
     @GetMapping("/me")
-    public ResponseEntity<ClienteDTO> getCurrentUser() {
-        Jwt jwt = (Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        String email = jwt.getClaimAsString("email");
-        Cliente user = clienteService.getClienteByEmail(email);
-        return user != null ? ResponseEntity.ok(clienteService.toDTO(user)) : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-    }
-
-    @PreAuthorize("isAuthenticated()")
-    @PutMapping("/update")
-    public ResponseEntity<?> updateCurrentUser(@RequestBody @Valid ClienteUpdateRequest request) {
-        Jwt jwt = (Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        String email = jwt.getClaimAsString("email");
-        
-        Cliente user = clienteService.getClienteByEmail(email);
-        if (user != null) {
-            user.setNome(request.getNome());
-            user.setCognome(request.getCognome());
-            clienteService.saveCliente(user);
-            return ResponseEntity.ok(clienteService.toDTO(user));
+    public ResponseEntity<?> getMyProfile(Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            Cliente cliente = clienteService.getClienteByEmail(email);
+            return ResponseEntity.ok(clienteService.toDTO(cliente));
+        } catch (ClienteNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseMessage("Profilo non trovato."));
         }
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseMessage("Utente non trovato"));
     }
 
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('ADMIN')") // Solo l'admin dovrebbe vedere tutti i clienti
+    public ResponseEntity<List<ClienteDTO>> getAllClienti() {
+        return ResponseEntity.ok(clienteService.getAllClienti());
+    }
+
+    @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getClienteById(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(clienteService.getCliente(id));
+        } catch (ClienteNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseMessage(e.getMessage()));
+        }
+    }
+
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> eliminaCliente(@PathVariable Long id) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseMessage> deleteCliente(@PathVariable Long id) {
         try {
             clienteService.deleteCliente(id);
-            return ResponseEntity.ok(new ResponseMessage("Cliente eliminato"));
-        } catch (Exception e) {
+            return ResponseEntity.ok(new ResponseMessage("Cliente eliminato con successo."));
+        } catch (ClienteNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseMessage(e.getMessage()));
+        }
+    }
+
+    @PutMapping("/me/update")
+    public ResponseEntity<?> updateProfile(@RequestBody ClienteUpdateRequest request, Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            ClienteDTO aggiornato = clienteService.updateCliente(email, request);
+            return ResponseEntity.ok(aggiornato);
+        } catch (ClienteNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseMessage("Profilo non trovato."));
+        } catch (CredentialsAlreadyExistException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(new ResponseMessage(e.getMessage()));
         }
     }
 }
