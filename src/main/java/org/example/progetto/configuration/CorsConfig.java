@@ -16,20 +16,22 @@ public class CorsConfig {
     public CorsFilter corsFilter() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        // Specifica l'origine del frontend (es. Angular)
+        // Origini permesse (Frontend Angular)
         configuration.setAllowedOrigins(List.of("http://localhost:4200"));
         
         // Metodi permessi
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         
-        // Header permessi
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With"));
+        // Header permessi (incluso Authorization per il Bearer Token)
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
         
-        // Importante per inviare credenziali/token
+        // Espone gli header al frontend (utile per debug o paginazione)
+        configuration.setExposedHeaders(Arrays.asList("Access-Control-Allow-Origin", "Access-Control-Allow-Credentials", "Authorization"));
+        
+        // Permetti credenziali (cookie/auth headers)
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        // Applica a tutti gli endpoint
         source.registerCorsConfiguration("/**", configuration);
         
         return new CorsFilter(source);
