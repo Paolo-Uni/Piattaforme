@@ -22,7 +22,7 @@ public class Spedizione {
     private Long id;
 
     // Aumentato a 255 caratteri, 50 sono pochi per un indirizzo
-    @Column(name = "indirizzo_spedizione", nullable = false, length = 255)
+    @Column(name = "indirizzo_spedizione", nullable = false)
     private String indirizzoSpedizione;
 
     @Column(name = "data_prevista", nullable = false)

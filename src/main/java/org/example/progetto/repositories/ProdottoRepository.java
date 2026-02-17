@@ -11,8 +11,6 @@ import java.util.List;
 @Repository
 public interface ProdottoRepository extends JpaRepository<Prodotto, Long>, JpaSpecificationExecutor<Prodotto> {
 
-    boolean existsByNomeAndMarcaAndTaglia(String nome, String marca, String taglia);
-
     @Query("SELECT DISTINCT p.marca FROM Prodotto p")
     List<String> findDistinctMarche();
 
