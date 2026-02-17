@@ -1,0 +1,9 @@
+/* src/app/components/order-list/order-list.component.css */
+.accordion-button:not(.collapsed) {
+  background-color: #e7f1ff;
+  color: #0c63e4;
+}
+
+.badge {
+  font-size: 0.9em;
+}
