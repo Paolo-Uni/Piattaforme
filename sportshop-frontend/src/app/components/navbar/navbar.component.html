@@ -1,0 +1,41 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container">
+    <a class="navbar-brand" routerLink="/">SportShop</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item">
+          <a class="nav-link" routerLink="/prodotti" routerLinkActive="active">Prodotti</a>
+        </li>
+      </ul>
+
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item" *ngIf="isLoggedIn">
+          <a class="nav-link" routerLink="/carrello">
+            <i class="bi bi-cart"></i> Carrello
+          </a>
+        </li>
+
+        <li class="nav-item dropdown" *ngIf="isLoggedIn">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+            Ciao, {{ userName }}
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" routerLink="/profilo">Il mio Profilo</a></li>
+            <li><a class="dropdown-item" routerLink="/ordini">I miei Ordini</a></li>
+            <li *ngIf="isAdmin"><hr class="dropdown-divider"></li>
+            <li *ngIf="isAdmin"><a class="dropdown-item" href="#">Admin Dashboard</a></li> <li><hr class="dropdown-divider"></li>
+            <li><button class="dropdown-item text-danger" (click)="logout()">Logout</button></li>
+          </ul>
+        </li>
+
+        <li class="nav-item" *ngIf="!isLoggedIn">
+          <button class="btn btn-outline-light ms-2" (click)="login()">Accedi</button>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>

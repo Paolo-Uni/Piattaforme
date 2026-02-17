@@ -1,0 +1,8 @@
+/* src/app/components/navbar/navbar.component.css */
+.nav-link {
+  cursor: pointer;
+}
+
+.dropdown-item {
+  cursor: pointer;
+}
