@@ -11,13 +11,14 @@ import java.util.List;
 @Repository
 public interface ProdottoRepository extends JpaRepository<Prodotto, Long>, JpaSpecificationExecutor<Prodotto> {
 
-    @Query("SELECT DISTINCT p.marca FROM Prodotto p")
+    // Aggiunto ORDER BY per liste ordinate nel frontend
+    @Query("SELECT DISTINCT p.marca FROM Prodotto p ORDER BY p.marca")
     List<String> findDistinctMarche();
 
-    @Query("SELECT DISTINCT p.categoria FROM Prodotto p")
+    @Query("SELECT DISTINCT p.categoria FROM Prodotto p ORDER BY p.categoria")
     List<String> findDistinctCategorie();
 
-    @Query("SELECT DISTINCT p.colore FROM Prodotto p")
+    @Query("SELECT DISTINCT p.colore FROM Prodotto p ORDER BY p.colore")
     List<String> findDistinctColori();
 
     @Query("SELECT DISTINCT p.taglia FROM Prodotto p")

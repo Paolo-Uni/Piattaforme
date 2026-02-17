@@ -9,5 +9,9 @@ import java.util.List;
 
 @Repository
 public interface OrdineRepository extends JpaRepository<Ordine, Long> {
+    
     List<Ordine> findByCliente(Cliente cliente);
+    
+    // [IMPORTANTE] Metodo mancante per controllo integrità prima di cancellare cliente
+    boolean existsByCliente(Cliente cliente);
 }

@@ -11,10 +11,16 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true)
+@EnableMethodSecurity // Abilita @PreAuthorize
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -23,31 +29,36 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable) // Disabilita CSRF (non necessario per API stateless)
-            .cors(cors -> cors.configure(http)) // Usa la configurazione CORS definita nel Bean CorsConfig
+            .csrf(AbstractHttpConfigurer::disable) // Disabilita CSRF per API stateless
+            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Usa la config CORS definita sotto
             .authorizeHttpRequests(auth -> auth
-                // Permetti a TUTTI di fare richieste OPTIONS (necessario per il preflight CORS del browser)
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                
                 // Endpoint pubblici (senza login)
-                .requestMatchers("/prodotti/all", "/prodotti/paged", "/prodotti/cerca", "/prodotti/{id}").permitAll()
-                .requestMatchers("/prodotti/marche", "/prodotti/categorie", "/prodotti/colori", "/prodotti/taglie").permitAll()
-                .requestMatchers("/cliente/registra").permitAll()
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Preflight CORS
+                .requestMatchers("/prodotti", "/prodotti/**").permitAll() // Lettura prodotti libera
+                .requestMatchers("/clienti/registra").permitAll() // Registrazione libera
                 
-                // Endpoint Admin (gestiti anche tramite @PreAuthorize nei controller, ma utile come sicurezza aggiuntiva)
-                .requestMatchers("/prodotti/admin/**").hasRole("ADMIN")
-                .requestMatchers("/cliente/all", "/cliente/{id}").hasRole("ADMIN")
-
                 // Tutto il resto richiede autenticazione
                 .anyRequest().authenticated()
             )
-            // Configura il server per validare i token JWT
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.jwtAuthenticationConverter(customJwtConverter))
             )
-            // Stateless: non crea sessioni HTTP (JSESSIONID)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         return http.build();
+    }
+
+    // Configurazione CORS integrata direttamente qui per evitare conflitti
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of("http://localhost:4200")); // Frontend Angular
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
+        configuration.setAllowCredentials(true);
+        
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }

@@ -1,68 +1,38 @@
 <div class="container mt-4">
   <h2>Il tuo Carrello</h2>
-
-  <div *ngIf="messaggio" class="alert alert-success">{{ messaggio }}</div>
-  <div *ngIf="errore" class="alert alert-danger">{{ errore }}</div>
-
-  <div *ngIf="cartItems.length === 0" class="text-center mt-5">
-    <p>Il carrello è vuoto.</p>
-    <a routerLink="/prodotti" class="btn btn-primary">Vai allo shopping</a>
-  </div>
+  <div *ngIf="cartItems.length === 0" class="alert alert-info">Il carrello è vuoto. <a routerLink="/prodotti">Vai allo shopping</a></div>
 
   <div *ngIf="cartItems.length > 0">
-    <table class="table table-striped align-middle">
-      <thead>
-      <tr>
-        <th>Prodotto</th>
-        <th>Taglia/Colore</th>
-        <th>Prezzo</th>
-        <th>Quantità</th>
-        <th>Totale</th>
-        <th>Azioni</th>
-      </tr>
-      </thead>
+    <table class="table align-middle">
+      <thead><tr><th>Prodotto</th><th>Prezzo</th><th>Qta</th><th>Totale</th><th>Azioni</th></tr></thead>
       <tbody>
       <tr *ngFor="let item of cartItems">
-        <td>{{ item.nomeProdotto }}</td>
-        <td>{{ item.taglia }} / {{ item.colore }}</td>
-        <td>€{{ item.prezzoUnitario | number:'1.2-2' }}</td>
+        <td>{{ item.nomeProdotto }} <br> <small class="text-muted">{{item.taglia}} - {{item.colore}}</small></td>
+        <td>€ {{ item.prezzoUnitario | number:'1.2-2' }}</td>
         <td>
-          <div class="input-group input-group-sm" style="width: 120px;">
+          <div class="btn-group btn-group-sm">
             <button class="btn btn-outline-secondary" (click)="decrementa(item.idProdotto)">-</button>
-            <span class="form-control text-center">{{ item.quantita }}</span>
+            <span class="btn btn-light disabled">{{ item.quantita }}</span>
             <button class="btn btn-outline-secondary" (click)="incrementa(item.idProdotto)">+</button>
           </div>
         </td>
-        <td>€{{ (item.prezzoUnitario * item.quantita) | number:'1.2-2' }}</td>
-        <td>
-          <button class="btn btn-danger btn-sm" (click)="rimuovi(item.idProdotto)">
-            <i class="bi bi-trash"></i> Rimuovi
-          </button>
-        </td>
+        <td>€ {{ (item.prezzoUnitario * item.quantita) | number:'1.2-2' }}</td>
+        <td><button class="btn btn-danger btn-sm" (click)="rimuovi(item.idProdotto)"><i class="bi bi-trash"></i></button></td>
       </tr>
       </tbody>
     </table>
 
     <div class="row justify-content-end mt-4">
       <div class="col-md-4">
-        <div class="card">
-          <div class="card-body">
-            <h5 class="card-title">Riepilogo</h5>
-            <p class="card-text d-flex justify-content-between">
-              <strong>Totale:</strong>
-              <span>€{{ totaleCarrello | number:'1.2-2' }}</span>
-            </p>
-
-            <hr>
-
-            <div class="mb-3">
-              <label for="indirizzo" class="form-label">Indirizzo di Spedizione</label>
-              <input type="text" id="indirizzo" class="form-control" [(ngModel)]="indirizzoSpedizione" placeholder="Via Roma 1, Città">
-            </div>
-
-            <button class="btn btn-success w-100 mb-2" (click)="ordina()">Procedi all'ordine</button>
-            <button class="btn btn-outline-danger w-100" (click)="svuota()">Svuota Carrello</button>
+        <div class="card p-3">
+          <h4>Totale: € {{ totale | number:'1.2-2' }}</h4>
+          <div class="mb-3">
+            <label>Indirizzo di Spedizione:</label>
+            <input type="text" class="form-control" [(ngModel)]="indirizzoSpedizione" placeholder="Via Roma 1, Milano">
           </div>
+          <button class="btn btn-success w-100" (click)="checkout()">Concludi Ordine</button>
+          <div *ngIf="errore" class="text-danger mt-2">{{ errore }}</div>
+          <div *ngIf="messaggio" class="text-success mt-2">{{ messaggio }}</div>
         </div>
       </div>
     </div>

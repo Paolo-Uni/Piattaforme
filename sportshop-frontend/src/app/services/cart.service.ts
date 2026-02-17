@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { CartItem } from '../models/cart.model';
 
@@ -12,43 +12,31 @@ export class CartService {
 
   constructor(private http: HttpClient) { }
 
-  addToCart(idProdotto: number, quantita: number): Observable<any> {
-    const params = new HttpParams()
-      .set('idProdotto', idProdotto.toString())
-      .set('quantita', quantita.toString());
-
-    return this.http.post(`${this.apiUrl}/aggiungi`, null, { params });
-  }
-
   getCart(): Observable<CartItem[]> {
-    return this.http.get<CartItem[]>(`${this.apiUrl}/vedi`);
+    return this.http.get<CartItem[]>(this.apiUrl);
   }
 
-  // Decrementa quantità
-  decreaseQuantity(idProdotto: number): Observable<any> {
-    const params = new HttpParams().set('idProdotto', idProdotto.toString());
-    return this.http.post(`${this.apiUrl}/rimuovi`, null, { params });
+  addToCart(idProdotto: number, quantita: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/aggiungi`, { idProdotto, quantita });
   }
 
-  // Incrementa quantità
-  increaseQuantity(idProdotto: number): Observable<any> {
-    const params = new HttpParams().set('idProdotto', idProdotto.toString());
-    return this.http.post(`${this.apiUrl}/aumenta`, null, { params });
-  }
-
-  // Rimuove totalmente il prodotto (corrisponde a @DeleteMapping("/elimina-prodotto") con @RequestParam)
   removeItem(idProdotto: number): Observable<any> {
-    const params = new HttpParams().set('idProdotto', idProdotto.toString());
-    return this.http.delete(`${this.apiUrl}/elimina-prodotto`, { params });
+    return this.http.delete(`${this.apiUrl}/rimuovi/${idProdotto}`);
+  }
+
+  increaseQuantity(idProdotto: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/incrementa/${idProdotto}`, {});
+  }
+
+  decreaseQuantity(idProdotto: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/decrementa/${idProdotto}`, {});
   }
 
   clearCart(): Observable<any> {
     return this.http.post(`${this.apiUrl}/svuota`, {});
   }
 
-  // Checkout: invia mappa con indirizzo come richiesto da @RequestBody Map<String, String> body
   checkout(indirizzoSpedizione: string): Observable<any> {
-    const body = { indirizzoSpedizione: indirizzoSpedizione };
-    return this.http.post(`${this.apiUrl}/ordina`, body);
+    return this.http.post(`${this.apiUrl}/ordina`, { indirizzoSpedizione });
   }
 }

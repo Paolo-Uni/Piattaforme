@@ -1,8 +1,8 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common'; // Importante per *ngFor
+import { CommonModule } from '@angular/common';
 import { ProductService } from '../../services/product.service';
 import { Product } from '../../models/product.model';
-import { FormsModule } from '@angular/forms'; // Per i filtri
+import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 
 @Component({
@@ -16,43 +16,32 @@ export class ProductListComponent implements OnInit {
 
   products: Product[] = [];
 
-  // Filtri
-  filters = {
-    nome: '',
-    marca: '',
-    categoria: '',
-    colore: '',
-    taglia: ''
-  };
+  filters = { nome: '', marca: '', categoria: '', colore: '', taglia: '' };
 
-  // Opzioni per le select
   marche: string[] = [];
   categorie: string[] = [];
   colori: string[] = [];
   taglie: string[] = [];
 
-  // Paginazione
   page = 0;
-  size = 10;
+  size = 12;
   totalPages = 0;
 
   constructor(private productService: ProductService) { }
 
   ngOnInit(): void {
     this.loadFiltersData();
-    this.search();
+    this.loadProducts();
   }
 
-  // Carica i dati per le select dei filtri
   loadFiltersData(): void {
-    this.productService.getMarche().subscribe(data => this.marche = data);
-    this.productService.getCategorie().subscribe(data => this.categorie = data);
-    this.productService.getColori().subscribe(data => this.colori = data);
-    this.productService.getTaglie().subscribe(data => this.taglie = data);
+    this.productService.getMarche().subscribe(d => this.marche = d);
+    this.productService.getCategorie().subscribe(d => this.categorie = d);
+    this.productService.getColori().subscribe(d => this.colori = d);
+    this.productService.getTaglie().subscribe(d => this.taglie = d);
   }
 
   search(): void {
-    // Reset paginazione a 0 quando si cerca
     this.page = 0;
     this.loadProducts();
   }
@@ -60,18 +49,10 @@ export class ProductListComponent implements OnInit {
   loadProducts(): void {
     this.productService.searchProducts(this.filters, this.page, this.size).subscribe({
       next: (data) => {
-        // CORREZIONE ERRORE: data è di tipo Page<Product>, i prodotti sono in data.content
         this.products = data.content;
         this.totalPages = data.totalPages;
-        // Se la pagina corrente è maggiore del totale (es. dopo un filtro), resetta
-        if (this.page >= this.totalPages && this.totalPages > 0) {
-          this.page = 0;
-          this.loadProducts(); // Ricarica con pagina 0
-        }
       },
-      error: (err) => {
-        console.error('Errore caricamento prodotti', err);
-      }
+      error: (err) => console.error(err)
     });
   }
 
@@ -79,17 +60,12 @@ export class ProductListComponent implements OnInit {
     if (newPage >= 0 && newPage < this.totalPages) {
       this.page = newPage;
       this.loadProducts();
+      window.scrollTo(0, 0);
     }
   }
 
   resetFilters(): void {
-    this.filters = {
-      nome: '',
-      marca: '',
-      categoria: '',
-      colore: '',
-      taglia: ''
-    };
+    this.filters = { nome: '', marca: '', categoria: '', colore: '', taglia: '' };
     this.search();
   }
 }

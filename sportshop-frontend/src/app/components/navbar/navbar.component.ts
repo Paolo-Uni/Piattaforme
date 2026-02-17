@@ -1,35 +1,26 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router'; // Assicurati che ci siano questi
 import { OAuthService } from 'angular-oauth2-oidc';
-import { authConfig } from '../../app.config';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterLink, RouterLinkActive], // Devono essere qui
   templateUrl: './navbar.component.html',
   styleUrls: ['./navbar.component.css']
 })
 export class NavbarComponent {
 
-  constructor(private oauthService: OAuthService) {
-    this.configure();
-  }
-
-  configure(): void {
-    this.oauthService.configure(authConfig);
-    this.oauthService.loadDiscoveryDocumentAndTryLogin();
-  }
+  constructor(private oauthService: OAuthService) { }
 
   get isLoggedIn(): boolean {
     return this.oauthService.hasValidAccessToken();
   }
 
-  get userName(): string {
-    const claims = this.oauthService.getIdentityClaims() as any;
-    // Keycloak di solito mette il nome in 'given_name' o 'name'
-    return claims ? (claims['given_name'] || claims['name']) : 'Utente';
+  get username(): string {
+    const claims: any = this.oauthService.getIdentityClaims();
+    return claims ? (claims['given_name'] || claims['email']) : '';
   }
 
   login(): void {

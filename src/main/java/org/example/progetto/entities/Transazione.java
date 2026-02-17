@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "transazione")
@@ -28,7 +28,7 @@ public class Transazione {
     private Ordine ordine;
 
     @Column(name = "data", nullable = false)
-    private Instant data;
+    private LocalDateTime data;
 
     @Column(name = "importo", nullable = false)
     private BigDecimal importo;

@@ -8,31 +8,22 @@ import { User, UserUpdateRequest } from '../models/user.model';
 })
 export class UserService {
 
-  private apiUrl = 'http://localhost:8082/cliente';
+  private apiUrl = 'http://localhost:8082/clienti';
 
   constructor(private http: HttpClient) { }
 
-  // Registrazione
-  register(user: User): Observable<User> {
-    return this.http.post<User>(`${this.apiUrl}/registra`, user);
+  // Registrazione (pubblica, non richiede token)
+  register(userData: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/registra`, userData);
   }
 
-  // Ottieni profilo loggato (ritorna ClienteDTO)
+  // Ottieni il profilo dell'utente loggato
   getMe(): Observable<User> {
     return this.http.get<User>(`${this.apiUrl}/me`);
   }
 
-  // Aggiorna profilo
+  // Aggiorna i dati del profilo
   updateProfile(data: UserUpdateRequest): Observable<User> {
-    return this.http.put<User>(`${this.apiUrl}/me/update`, data);
-  }
-
-  // Admin: Ottieni tutti
-  getAllUsers(): Observable<User[]> {
-    return this.http.get<User[]>(`${this.apiUrl}/all`);
-  }
-
-  deleteUser(id: number): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/${id}`);
+    return this.http.put<User>(`${this.apiUrl}/me`, data);
   }
 }

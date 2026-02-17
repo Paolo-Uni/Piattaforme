@@ -10,30 +10,24 @@ import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@Component // <--- QUESTA ANNOTAZIONE È FONDAMENTALE PER RISOLVERE L'ERRORE
+@Component
 public class CustomJwtConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
     @Override
     public AbstractAuthenticationToken convert(Jwt jwt) {
         Collection<GrantedAuthority> authorities = extractAuthorities(jwt);
-        // Usa il claim "email" o "preferred_username" come nome principale se disponibile
+        // Usa l'email come principal name (più utile dell'ID numerico)
         String principalClaimName = jwt.getClaimAsString("email");
-        if (principalClaimName == null) {
-            principalClaimName = jwt.getClaimAsString("preferred_username");
-        }
         if (principalClaimName == null) {
             principalClaimName = jwt.getSubject();
         }
-        
         return new JwtAuthenticationToken(jwt, authorities, principalClaimName);
     }
 
     private Collection<GrantedAuthority> extractAuthorities(Jwt jwt) {
-        // Estrae i ruoli dalla sezione 'realm_access' del token Keycloak
         Map<String, Object> realmAccess = jwt.getClaim("realm_access");
         if (realmAccess == null || realmAccess.isEmpty()) {
             return Collections.emptyList();
@@ -44,8 +38,7 @@ public class CustomJwtConverter implements Converter<Jwt, AbstractAuthentication
             return Collections.emptyList();
         }
 
-        // Converte i ruoli in GrantedAuthority con prefisso "ROLE_"
-        // Es: "admin" diventa "ROLE_ADMIN"
+        // Mappa i ruoli Keycloak (es. "admin") in Authority Spring (es. "ROLE_ADMIN")
         return roles.stream()
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()))
                 .collect(Collectors.toList());

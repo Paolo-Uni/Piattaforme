@@ -1,75 +1,50 @@
 <div class="container mt-4">
-  <h2>Prodotti</h2>
-
-  <div class="card p-3 mb-4">
-    <div class="row g-3">
+  <div class="card p-3 mb-4 shadow-sm">
+    <div class="row g-2">
       <div class="col-md-3">
-        <input type="text" class="form-control" placeholder="Cerca nome..." [(ngModel)]="filters.nome">
+        <input type="text" class="form-control" placeholder="Cerca..." [(ngModel)]="filters.nome">
       </div>
       <div class="col-md-2">
-        <select class="form-select" [(ngModel)]="filters.marca">
-          <option value="">Tutte le marche</option>
-          <option *ngFor="let m of marche" [value]="m">{{m}}</option>
-        </select>
+        <select class="form-select" [(ngModel)]="filters.marca"><option value="">Marca</option><option *ngFor="let m of marche" [value]="m">{{m}}</option></select>
       </div>
       <div class="col-md-2">
-        <select class="form-select" [(ngModel)]="filters.categoria">
-          <option value="">Tutte le categorie</option>
-          <option *ngFor="let c of categorie" [value]="c">{{c}}</option>
-        </select>
+        <select class="form-select" [(ngModel)]="filters.categoria"><option value="">Categoria</option><option *ngFor="let c of categorie" [value]="c">{{c}}</option></select>
       </div>
       <div class="col-md-2">
-        <select class="form-select" [(ngModel)]="filters.colore">
-          <option value="">Tutti i colori</option>
-          <option *ngFor="let c of colori" [value]="c">{{c}}</option>
-        </select>
+        <select class="form-select" [(ngModel)]="filters.colore"><option value="">Colore</option><option *ngFor="let c of colori" [value]="c">{{c}}</option></select>
       </div>
-      <div class="col-md-2">
-        <select class="form-select" [(ngModel)]="filters.taglia">
-          <option value="">Tutte le taglie</option>
-          <option *ngFor="let t of taglie" [value]="t">{{t}}</option>
-        </select>
+      <div class="col-md-1">
+        <select class="form-select" [(ngModel)]="filters.taglia"><option value="">Taglia</option><option *ngFor="let t of taglie" [value]="t">{{t}}</option></select>
       </div>
-      <div class="col-md-1 d-grid">
-        <button class="btn btn-primary" (click)="search()">Cerca</button>
-      </div>
-      <div class="col-md-12 text-end">
-        <button class="btn btn-secondary btn-sm" (click)="resetFilters()">Reset</button>
+      <div class="col-md-2 d-flex gap-2">
+        <button class="btn btn-primary w-100" (click)="search()">Cerca</button>
+        <button class="btn btn-outline-secondary" (click)="resetFilters()">Reset</button>
       </div>
     </div>
   </div>
 
   <div class="row">
-    <div class="col-md-4 mb-4" *ngFor="let product of products">
-      <div class="card h-100">
-        <div class="card-body">
-          <h5 class="card-title">{{ product.nome }}</h5>
-          <h6 class="card-subtitle mb-2 text-muted">{{ product.marca }} - {{ product.categoria }}</h6>
-          <p class="card-text">{{ product.descrizione }}</p>
-          <p class="card-text">
-            <strong>Prezzo:</strong> €{{ product.prezzo | number:'1.2-2' }} <br>
-            <small>Taglia: {{ product.taglia }} | Colore: {{ product.colore }}</small>
-          </p>
-        </div>
-        <div class="card-footer bg-transparent border-top-0">
-          <a [routerLink]="['/prodotti', product.id]" class="btn btn-outline-primary w-100">Dettagli</a>
+    <div class="col-md-3 mb-4" *ngFor="let p of products">
+      <div class="card h-100 product-card">
+        <img [src]="p.imageUrl || 'assets/placeholder.png'" class="card-img-top p-3" style="height: 200px; object-fit: contain;" alt="...">
+        <div class="card-body d-flex flex-column">
+          <h6 class="card-title">{{ p.nome }}</h6>
+          <p class="card-text text-muted small">{{ p.marca }} - {{ p.categoria }}</p>
+          <div class="mt-auto">
+            <h5 class="text-primary">€ {{ p.prezzo | number:'1.2-2' }}</h5>
+            <a [routerLink]="['/prodotti', p.id]" class="btn btn-outline-primary w-100 btn-sm">Dettagli</a>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <div *ngIf="products.length === 0" class="alert alert-info">
-    Nessun prodotto trovato.
-  </div>
-
-  <nav *ngIf="totalPages > 1" aria-label="Page navigation">
+  <nav *ngIf="totalPages > 1">
     <ul class="pagination justify-content-center">
       <li class="page-item" [class.disabled]="page === 0">
         <button class="page-link" (click)="onPageChange(page - 1)">Precedente</button>
       </li>
-      <li class="page-item disabled">
-        <span class="page-link">Pagina {{ page + 1 }} di {{ totalPages }}</span>
-      </li>
+      <li class="page-item disabled"><span class="page-link">{{ page + 1 }} / {{ totalPages }}</span></li>
       <li class="page-item" [class.disabled]="page === totalPages - 1">
         <button class="page-link" (click)="onPageChange(page + 1)">Successivo</button>
       </li>

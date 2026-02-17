@@ -12,9 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
+import java.time.LocalDateTime; // Uniformato a LocalDateTime
 import java.util.*;
 
 @Service
@@ -46,7 +44,6 @@ public class CarrelloService {
                     return carrelloRepository.save(c);
                 });
 
-        // Lock sul carrello per evitare accessi concorrenti
         entityManager.refresh(carrello);
         entityManager.lock(carrello, LockModeType.PESSIMISTIC_WRITE);
 
@@ -129,7 +126,6 @@ public class CarrelloService {
         aggiornaTotaleCarrello(carrello);
     }
 
-    // --- NUOVO METODO AGGIUNTO ---
     @Transactional
     public void rimuoviProdottoDalCarrello(String email, Long idProdotto) {
         Cliente cliente = clienteRepository.findByEmail(email)
@@ -146,14 +142,12 @@ public class CarrelloService {
         OggettoCarrello oggetto = oggettoCarrelloRepository.findByCarrelloAndProdotto(carrello, prodotto);
         if (oggetto != null) {
             oggettoCarrelloRepository.delete(oggetto);
-            // Facciamo flush per assicurare che la delete venga processata prima del ricalcolo
             entityManager.flush(); 
             aggiornaTotaleCarrello(carrello);
         } else {
             throw new ProductNotFoundException("Il prodotto non è presente nel carrello.");
         }
     }
-    // -----------------------------
 
     @Transactional
     public void svuotaCarrello(String email) {
@@ -170,7 +164,6 @@ public class CarrelloService {
 
     @Transactional
     public void aggiornaTotaleCarrello(Carrello carrello) {
-        // Ricarichiamo gli oggetti per essere sicuri di avere i dati aggiornati
         List<OggettoCarrello> oggetti = oggettoCarrelloRepository.findByCarrello(carrello);
         BigDecimal totale = BigDecimal.ZERO;
         for (OggettoCarrello oc : oggetti) {
@@ -194,7 +187,6 @@ public class CarrelloService {
         List<OggettoCarrello> prodottiCarrello = oggettoCarrelloRepository.findByCarrello(carrello);
         if (prodottiCarrello.isEmpty()) throw new InvalidCartOperationException("Carrello vuoto.");
 
-        // Verifica e aggiornamento Stock atomico
         for (OggettoCarrello oc : prodottiCarrello) {
             Prodotto p = oc.getProdotto();
             entityManager.lock(p, LockModeType.PESSIMISTIC_WRITE);
@@ -216,7 +208,8 @@ public class CarrelloService {
 
         Transazione transazione = new Transazione();
         transazione.setOrdine(ordine);
-        transazione.setData(Instant.now());
+        // FIX: Uso LocalDateTime per coerenza
+        transazione.setData(LocalDateTime.now());
         transazione.setImporto(totaleOrdine);
 
         if (processaPagamento(totaleOrdine)) {
@@ -226,6 +219,8 @@ public class CarrelloService {
 
             for (OggettoCarrello oc : prodottiCarrello) {
                 OggettoOrdine oo = new OggettoOrdine();
+                // FIX: Salviamo l'ID originale per lo storico
+                oo.setProdottoId(oc.getProdotto().getId()); 
                 oo.setNomeProdotto(oc.getProdotto().getNome());
                 oo.setTaglia(oc.getProdotto().getTaglia());
                 oo.setColore(oc.getProdotto().getColore());
@@ -239,25 +234,23 @@ public class CarrelloService {
             Spedizione spedizione = new Spedizione();
             spedizione.setOrdine(ordine);
             spedizione.setIndirizzoSpedizione(indirizzoSpedizione);
-            spedizione.setDataPrevista(Instant.now().plus(7, ChronoUnit.DAYS));
+            // FIX: Uso LocalDateTime
+            spedizione.setDataPrevista(LocalDateTime.now().plusDays(7));
             spedizione.setStato("In preparazione");
             spedizioneRepository.save(spedizione);
             ordine.setSpedizione(spedizione);
 
             ordineRepository.save(ordine);
 
-            // Pulizia carrello dopo ordine riuscito
             oggettoCarrelloRepository.deleteAllByCarrello(carrello);
             carrello.setTotaleCarrello(BigDecimal.ZERO);
             carrelloRepository.save(carrello);
         } else {
-            // Se il pagamento fallisce, l'eccezione farà rollback anche dello stock
             throw new PaymentException("Il pagamento è stato rifiutato.");
         }
     }
 
     private boolean processaPagamento(BigDecimal amount) {
-        // Simulazione pagamento (80% successo)
         return amount.compareTo(BigDecimal.ZERO) > 0 && RANDOM.nextInt(100) < 80;
     }
 

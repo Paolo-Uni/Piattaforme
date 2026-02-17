@@ -7,12 +7,17 @@ import org.example.progetto.dto.Request;
 import org.example.progetto.entities.Cliente;
 import org.example.progetto.exceptions.ClienteNotFoundException;
 import org.example.progetto.exceptions.CredentialsAlreadyExistException;
+import org.example.progetto.exceptions.InvalidOperationException;
+import org.example.progetto.repositories.CarrelloRepository;
 import org.example.progetto.repositories.ClienteRepository;
+import org.example.progetto.repositories.OggettoCarrelloRepository;
+import org.example.progetto.repositories.OrdineRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -20,6 +25,9 @@ import java.util.stream.Collectors;
 public class ClienteService {
 
     private final ClienteRepository clienteRepository;
+    private final OrdineRepository ordineRepository;
+    private final CarrelloRepository carrelloRepository;
+    private final OggettoCarrelloRepository oggettoCarrelloRepository;
 
     @Transactional(propagation = Propagation.REQUIRED)
     public ClienteDTO registraCliente(Request req) throws CredentialsAlreadyExistException {
@@ -36,14 +44,20 @@ public class ClienteService {
         cliente.setCognome(req.getCognome());
         cliente.setEmail(req.getEmail());
         cliente.setTelefono(req.getTelefono());
-        // L'indirizzo viene solitamente impostato in fase di ordine o update profilo, qui lo lasciamo null o vuoto
         
         Cliente salvato = clienteRepository.save(cliente);
         return toDTO(salvato);
     }
 
     public ClienteDTO toDTO(Cliente cliente) {
-        return new ClienteDTO(cliente.getId(), cliente.getNome(), cliente.getCognome(), cliente.getEmail(), cliente.getTelefono());
+        return new ClienteDTO(
+            cliente.getId(), 
+            cliente.getNome(), 
+            cliente.getCognome(), 
+            cliente.getEmail(), 
+            cliente.getTelefono(),
+            cliente.getIndirizzo()
+        );
     }
 
     @Transactional(readOnly = true)
@@ -60,36 +74,39 @@ public class ClienteService {
                 .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato con id: " + id));
     }
 
+    // ... Metodi di ricerca invariati ...
     @Transactional(readOnly = true)
     public List<ClienteDTO> getClientiByNome(String nome) {
-        return clienteRepository.findByNome(nome)
-                .stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
+        return clienteRepository.findByNome(nome).stream().map(this::toDTO).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<ClienteDTO> getClientiByCognome(String cognome) {
-        return clienteRepository.findByCognome(cognome)
-                .stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
+        return clienteRepository.findByCognome(cognome).stream().map(this::toDTO).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<ClienteDTO> getClientiByNomeAndCognome(String nome, String cognome) {
-        return clienteRepository.findByNomeAndCognome(nome, cognome)
-                .stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
+        return clienteRepository.findByNomeAndCognome(nome, cognome).stream().map(this::toDTO).collect(Collectors.toList());
     }
 
     @Transactional
     public void deleteCliente(Long id) {
-        if (!clienteRepository.existsById(id)) {
-            throw new ClienteNotFoundException("Cliente non trovato con ID: " + id);
+        Cliente cliente = clienteRepository.findById(id)
+                .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato con ID: " + id));
+
+        // Controllo ordini: Se ha ordini, impediamo la cancellazione per integrità dati
+        if (ordineRepository.existsByCliente(cliente)) {
+            throw new InvalidOperationException("Impossibile eliminare un cliente che ha già effettuato ordini.");
         }
-        clienteRepository.deleteById(id);
+
+        // Pulizia Carrello: Se ha un carrello, lo svuotiamo e cancelliamo
+        carrelloRepository.findByCliente(cliente).ifPresent(c -> {
+            oggettoCarrelloRepository.deleteAllByCarrello(c);
+            carrelloRepository.delete(c);
+        });
+
+        clienteRepository.delete(cliente);
     }
 
     @Transactional(readOnly = true)
@@ -120,16 +137,29 @@ public class ClienteService {
         if (request.getCognome() != null && !request.getCognome().isBlank()) {
             cliente.setCognome(request.getCognome());
         }
-        if (request.getTelefono() != null && !request.getTelefono().isBlank()) {
-            // Opzionale: Controllo se il nuovo telefono è già usato da altri
-            if (!cliente.getTelefono().equals(request.getTelefono()) &&
-                    clienteRepository.findByTelefono(request.getTelefono()).isPresent()) {
-                throw new CredentialsAlreadyExistException("Numero di telefono già in uso da un altro utente.");
+        
+        // FIX: Gestione corretta telefono (evita NullPointerException e permette rimozione)
+        if (request.getTelefono() != null) {
+            if (request.getTelefono().isBlank()) {
+                cliente.setTelefono(null);
+            } else {
+                String newPhone = request.getTelefono();
+                // Verifica duplicati solo se il numero è diverso da quello attuale
+                if (!Objects.equals(cliente.getTelefono(), newPhone) && 
+                    clienteRepository.findByTelefono(newPhone).isPresent()) {
+                    throw new CredentialsAlreadyExistException("Numero di telefono già in uso da un altro utente.");
+                }
+                cliente.setTelefono(newPhone);
             }
-            cliente.setTelefono(request.getTelefono());
         }
-        if (request.getIndirizzo() != null && !request.getIndirizzo().isBlank()) {
-            cliente.setIndirizzo(request.getIndirizzo());
+
+        // FIX: Gestione indirizzo (permette rimozione)
+        if (request.getIndirizzo() != null) {
+            if (request.getIndirizzo().isBlank()) {
+                cliente.setIndirizzo(null);
+            } else {
+                cliente.setIndirizzo(request.getIndirizzo());
+            }
         }
 
         Cliente aggiornato = clienteRepository.save(cliente);

@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "spedizione")
@@ -26,13 +26,13 @@ public class Spedizione {
     private String indirizzoSpedizione;
 
     @Column(name = "data_prevista", nullable = false)
-    private Instant dataPrevista;
+    private LocalDateTime dataPrevista;
 
     @Column(name = "stato", nullable = false, length = 50)
     private String stato;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_ordine")
+    @JoinColumn(name = "ordine")
     @JsonIgnore // Evita ricorsione
     private Ordine ordine;
 }

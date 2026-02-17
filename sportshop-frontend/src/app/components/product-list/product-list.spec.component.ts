@@ -1,9 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+
 import { ProductListComponent } from './product-list.component';
-import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { ActivatedRoute } from '@angular/router';
-import { of } from 'rxjs';
-import { KeycloakService } from 'keycloak-angular';
+import {beforeEach, describe, expect, it} from 'vitest';
 
 describe('ProductListComponent', () => {
   let component: ProductListComponent;
@@ -11,16 +9,13 @@ describe('ProductListComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ProductListComponent, HttpClientTestingModule],
-      providers: [
-        { provide: ActivatedRoute, useValue: { params: of({}) } },
-        { provide: KeycloakService, useValue: { isLoggedIn: () => true } }
-      ]
-    }).compileComponents();
+      imports: [ProductListComponent]
+    })
+    .compileComponents();
 
     fixture = TestBed.createComponent(ProductListComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
+    await fixture.whenStable();
   });
 
   it('should create', () => {

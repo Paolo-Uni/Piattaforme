@@ -9,8 +9,8 @@ import org.example.progetto.entities.*;
 import org.example.progetto.exceptions.ClienteNotFoundException;
 import org.example.progetto.exceptions.InvalidOperationException;
 import org.example.progetto.repositories.ClienteRepository;
-import org.example.progetto.repositories.OggettoOrdineRepository;
 import org.example.progetto.repositories.OrdineRepository;
+import org.example.progetto.repositories.ProdottoRepository;
 import org.example.progetto.support.StatoOrdine;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,16 +29,13 @@ public class OrdineService {
     private final EntityManager entityManager;
     private final OrdineRepository ordineRepository;
     private final ClienteRepository clienteRepository;
-    private final OggettoOrdineRepository oggettoOrdineRepository;
+    private final ProdottoRepository prodottoRepository; // Necessario per ripristinare lo stock
 
     @Transactional
     public void annullaOrdine(Long idOrdine, String emailCliente, String motivo) {
         Cliente cliente = clienteRepository.findByEmail(emailCliente)
                 .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato"));
         
-        // Lock ottimistico o pessimistico sul cliente non strettamente necessario qui se non modifichiamo il saldo, 
-        // ma utile se avessimo logica di wallet.
-
         Ordine ordine = ordineRepository.findById(idOrdine)
                 .orElseThrow(() -> new InvalidOperationException("Ordine non trovato"));
         
@@ -49,15 +46,29 @@ public class OrdineService {
         }
 
         StatoOrdine statoAttuale = ordine.getStato();
-        if (statoAttuale == StatoOrdine.ANNULLATO || statoAttuale == StatoOrdine.SPEDITO) {
+        if (statoAttuale == StatoOrdine.ANNULLATO || statoAttuale == StatoOrdine.SPEDITO || statoAttuale == StatoOrdine.CONSEGNATO) {
             throw new InvalidOperationException("Impossibile annullare l'ordine nello stato attuale: " + statoAttuale);
         }
 
+        // 1. Gestione Spedizione
         Spedizione sped = ordine.getSpedizione();
         if (sped != null) {
-            // Lock sulla spedizione per evitare che venga marcata come spedita mentre annulliamo
             entityManager.lock(sped, LockModeType.PESSIMISTIC_WRITE);
             sped.setStato("Annullata a seguito di cancellazione ordine");
+        }
+
+        // 2. Ripristino dello Stock (CORREZIONE IMPORTANTE)
+        for (OggettoOrdine item : ordine.getOggetti()) {
+            // Cerchiamo il prodotto originale. 
+            // Se abbiamo salvato l'ID originale in OggettoOrdine usiamo quello, altrimenti cerchiamo per nome o ID se disponibile.
+            // Qui assumiamo che OggettoOrdine abbia il riferimento o l'ID (come aggiunto nella fix delle Entity).
+            if (item.getProdottoId() != null) {
+                prodottoRepository.findById(item.getProdottoId()).ifPresent(prodotto -> {
+                    entityManager.lock(prodotto, LockModeType.PESSIMISTIC_WRITE);
+                    prodotto.setStock(prodotto.getStock() + item.getQuantita());
+                    prodottoRepository.save(prodotto);
+                });
+            }
         }
 
         ordine.setStato(StatoOrdine.ANNULLATO);
@@ -70,8 +81,6 @@ public class OrdineService {
             System.err.println("Fallimento rimborso per ordine " + ordine.getId() + ": " + e.getMessage());
             ordine.setNote(ordine.getNote() + " | ERRORE: Rimborso FALLITO, contattare assistenza.");
             ordineRepository.save(ordine);
-            // Non rilanciamo l'eccezione per non fare rollback dello stato ANNULLATO, 
-            // ma in un sistema reale questo andrebbe gestito con code o job asincroni.
         }
     }
 
@@ -86,7 +95,6 @@ public class OrdineService {
             entityManager.lock(transazione, LockModeType.PESSIMISTIC_WRITE);
             return transazione.getImporto();
         } else {
-            // Se non c'è transazione (es. Pagamento alla consegna non ancora avvenuto), rimborso è 0
             return BigDecimal.ZERO; 
         }
     }
@@ -95,7 +103,7 @@ public class OrdineService {
         if (importo.compareTo(BigDecimal.ZERO) == 0) return;
         
         System.out.println("Richiesta rimborso inviata al gateway. Importo: " + importo);
-        boolean rimborsoSuccesso = RANDOM.nextInt(100) < 90; // 90% successo
+        boolean rimborsoSuccesso = RANDOM.nextInt(100) < 90; 
 
         if (rimborsoSuccesso) {
             System.out.println("Rimborso confermato dal gateway.");
@@ -113,16 +121,34 @@ public class OrdineService {
         List<OrdineDTO> ordiniDTO = new ArrayList<>();
 
         for (Ordine ordine : ordini) {
-            OrdineDTO dto = new OrdineDTO();
-            dto.setIdOrdine(ordine.getId());
-            dto.setData(ordine.getDataOrdine());
-            dto.setStato(ordine.getStato().toString());
-            dto.setTotaleOrdine(ordine.getTotale());
+            ordiniDTO.add(mapToDTO(ordine));
+        }
+        return ordiniDTO;
+    }
 
-            List<OggettoOrdine> prodottiOrdinati = oggettoOrdineRepository.findByOrdine(ordine);
-            List<OggettoOrdineDTO> prodottiDTO = new ArrayList<>();
+    @Transactional(readOnly = true)
+    public OrdineDTO getOrdineDTOById(Long idOrdine) {
+        Ordine ordine = ordineRepository.findById(idOrdine)
+                .orElseThrow(() -> new InvalidOperationException("Ordine non trovato con ID: " + idOrdine));
+        return mapToDTO(ordine);
+    }
 
-            for (OggettoOrdine po : prodottiOrdinati) {
+    // Metodo helper per la mappatura Entity -> DTO
+    private OrdineDTO mapToDTO(Ordine ordine) {
+        OrdineDTO dto = new OrdineDTO();
+        dto.setIdOrdine(ordine.getId());
+        dto.setData(ordine.getDataOrdine());
+        dto.setStato(ordine.getStato().toString());
+        dto.setTotaleOrdine(ordine.getTotale());
+        
+        // FIX: Mappatura corretta dell'indirizzo spedizione
+        if (ordine.getSpedizione() != null) {
+            dto.setIndirizzoSpedizione(ordine.getSpedizione().getIndirizzoSpedizione());
+        }
+
+        List<OggettoOrdineDTO> prodottiDTO = new ArrayList<>();
+        if (ordine.getOggetti() != null) {
+            for (OggettoOrdine po : ordine.getOggetti()) {
                 OggettoOrdineDTO oggettoDTO = new OggettoOrdineDTO();
                 oggettoDTO.setIdOggetto(po.getId());
                 oggettoDTO.setNome(po.getNomeProdotto());
@@ -132,16 +158,8 @@ public class OrdineService {
                 oggettoDTO.setQuantita(po.getQuantita());
                 prodottiDTO.add(oggettoDTO);
             }
-
-            dto.setOggetti(prodottiDTO);
-            ordiniDTO.add(dto);
         }
-        return ordiniDTO;
-    }
-
-    @Transactional(readOnly = true)
-    public Ordine getOrdineById(Long idOrdine) {
-        return ordineRepository.findById(idOrdine)
-                .orElseThrow(() -> new InvalidOperationException("Ordine non trovato con ID: " + idOrdine));
+        dto.setOggetti(prodottiDTO);
+        return dto;
     }
 }

@@ -13,4 +13,5 @@ public class ClienteDTO {
     private String cognome;
     private String email;
     private String telefono;
+    private String indirizzo; // Aggiunto campo mancante
 }

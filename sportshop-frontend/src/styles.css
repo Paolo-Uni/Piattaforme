@@ -1,62 +1,9 @@
-/* Importazione Bootstrap */
+/* src/styles.css */
 @import 'bootstrap/dist/css/bootstrap.min.css';
-@import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css');
+@import 'bootstrap-icons/font/bootstrap-icons.css';
 
-:root {
-  --primary-color: #3498db;      /* Blu brillante */
-  --secondary-color: #2c3e50;    /* Blu scuro */
-  --background-color: #ecf0f1;   /* Grigio chiaro */
-  --text-color: #333;
-  --card-background: #ffffff;
-  --success-color: #2ecc71;
-  --danger-color: #e74c3c;
-  --warning-color: #f1c40f;
-  --border-radius: 12px;
-  --box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
-}
-
+/* Stile base per distanziare il contenuto dalla navbar */
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  background-color: var(--background-color);
-  color: var(--text-color);
-  padding-top: 70px; /* Spazio per navbar fissa */
-}
-
-/* Override componenti Bootstrap */
-.btn {
-  border-radius: 8px;
-  padding: 10px 20px;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  border: none;
-}
-
-.btn-primary { background-color: var(--primary-color); }
-.btn-primary:hover { background-color: #2980b9; transform: translateY(-2px); }
-
-.btn-success { background-color: var(--success-color); }
-.btn-danger { background-color: var(--danger-color); }
-
-.card {
-  background-color: var(--card-background);
-  border-radius: var(--border-radius);
-  border: none;
-  box-shadow: var(--box-shadow);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
-}
-
-.form-control {
-  border-radius: 8px;
-  padding: 12px;
-  border: 1px solid #dfe6e9;
-}
-
-.form-control:focus {
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.25);
-  border-color: var(--primary-color);
+  padding-top: 70px;
+  background-color: #f8f9fa;
 }

@@ -16,5 +16,6 @@ public class OrdineDTO {
     private LocalDateTime data;
     private String stato;
     private BigDecimal totaleOrdine;
+    private String indirizzoSpedizione; // Campo aggiunto
     private List<OggettoOrdineDTO> oggetti;
 }

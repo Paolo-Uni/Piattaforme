@@ -1,55 +1,41 @@
-<div class="container mt-4">
-  <div class="card mx-auto" style="max-width: 600px;">
-    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-      <h3 class="mb-0">Il mio Profilo</h3>
-      <button class="btn btn-light btn-sm" (click)="logout()">Logout</button>
-    </div>
-    <div class="card-body" *ngIf="user">
-
-      <div *ngIf="messaggio" class="alert alert-success">{{ messaggio }}</div>
-      <div *ngIf="errore" class="alert alert-danger">{{ errore }}</div>
-
-      <div *ngIf="!editMode">
-        <p><strong>Email:</strong> {{ user.email }}</p>
-        <p><strong>Nome:</strong> {{ user.nome }}</p>
-        <p><strong>Cognome:</strong> {{ user.cognome }}</p>
-        <p><strong>Telefono:</strong> {{ user.telefono || 'Non specificato' }}</p>
-        <p><strong>Indirizzo Predefinito:</strong> {{ user.indirizzo || 'Non specificato' }}</p>
-
-        <button class="btn btn-warning" (click)="toggleEdit()">Modifica Dati</button>
+<div class="container mt-5" *ngIf="user">
+  <h2>Profilo Utente</h2>
+  <div class="card p-4">
+    <div class="mb-3 row">
+      <label class="col-sm-2 col-form-label">Nome:</label>
+      <div class="col-sm-10">
+        <input type="text" class="form-control" [(ngModel)]="formData.nome" [disabled]="!editMode">
       </div>
-
-      <div *ngIf="editMode">
-        <form (ngSubmit)="salvaModifiche()">
-          <div class="mb-3">
-            <label class="form-label">Email</label>
-            <input type="text" class="form-control" [value]="user.email" disabled readonly>
-            <small class="text-muted">L'email non può essere modificata.</small>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Nome</label>
-            <input type="text" class="form-control" [(ngModel)]="updateData.nome" name="nome" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Cognome</label>
-            <input type="text" class="form-control" [(ngModel)]="updateData.cognome" name="cognome" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Telefono</label>
-            <input type="text" class="form-control" [(ngModel)]="updateData.telefono" name="telefono">
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Indirizzo</label>
-            <input type="text" class="form-control" [(ngModel)]="updateData.indirizzo" name="indirizzo">
-          </div>
-
-          <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-success">Salva</button>
-            <button type="button" class="btn btn-secondary" (click)="toggleEdit()">Annulla</button>
-          </div>
-        </form>
-      </div>
-
     </div>
+    <div class="mb-3 row">
+      <label class="col-sm-2 col-form-label">Cognome:</label>
+      <div class="col-sm-10">
+        <input type="text" class="form-control" [(ngModel)]="formData.cognome" [disabled]="!editMode">
+      </div>
+    </div>
+    <div class="mb-3 row">
+      <label class="col-sm-2 col-form-label">Email:</label>
+      <div class="col-sm-10">
+        <input type="text" class="form-control-plaintext" [value]="user.email" readonly>
+      </div>
+    </div>
+    <div class="mb-3 row">
+      <label class="col-sm-2 col-form-label">Telefono:</label>
+      <div class="col-sm-10">
+        <input type="text" class="form-control" [(ngModel)]="formData.telefono" [disabled]="!editMode">
+      </div>
+    </div>
+    <div class="mb-3 row">
+      <label class="col-sm-2 col-form-label">Indirizzo:</label>
+      <div class="col-sm-10">
+        <input type="text" class="form-control" [(ngModel)]="formData.indirizzo" [disabled]="!editMode">
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary" (click)="toggleEdit()">{{ editMode ? 'Annulla' : 'Modifica' }}</button>
+      <button *ngIf="editMode" class="btn btn-success" (click)="save()">Salva</button>
+    </div>
+    <div *ngIf="messaggio" class="alert alert-success mt-3">{{ messaggio }}</div>
   </div>
 </div>

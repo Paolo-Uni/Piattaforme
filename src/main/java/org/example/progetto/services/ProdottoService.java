@@ -27,6 +27,7 @@ public class ProdottoService {
     private final ProdottoRepository prodottoRepository;
     private final EntityManager entityManager;
 
+    // Lista delle taglie standard da gestire esplicitamente
     private final List<String> TAGLIE_STANDARD = Arrays.asList("XS", "S", "M", "L", "XL", "XXL");
 
     @Transactional(readOnly = true)
@@ -46,20 +47,26 @@ public class ProdottoService {
         return prodottoRepository.findAll((root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
+            // Ricerca parziale case-insensitive per il nome
             if (nome != null && !nome.isEmpty()) {
                 predicates.add(cb.like(cb.lower(root.get("nome")), "%" + nome.toLowerCase() + "%"));
             }
+            // Filtri esatti ma case-insensitive per evitare discrepanze (es. Nike vs nike)
             if (marca != null && !marca.isEmpty()) {
-                predicates.add(cb.equal(root.get("marca"), marca));
+                predicates.add(cb.equal(cb.lower(root.get("marca")), marca.toLowerCase()));
             }
             if (categoria != null && !categoria.isEmpty()) {
-                predicates.add(cb.equal(root.get("categoria"), categoria));
+                predicates.add(cb.equal(cb.lower(root.get("categoria")), categoria.toLowerCase()));
             }
             if (colore != null && !colore.isEmpty()) {
-                predicates.add(cb.equal(root.get("colore"), colore));
+                predicates.add(cb.equal(cb.lower(root.get("colore")), colore.toLowerCase()));
             }
+            
+            // Gestione speciale per le taglie
             if (taglia != null && !taglia.isEmpty()) {
                 if (taglia.equalsIgnoreCase("Altro")) {
+                    // Cerca taglie che NON sono nella lista standard (case insensitive non supportato facilmente con .in(), 
+                    // ma le taglie standard sono convenzionalmente maiuscole)
                     predicates.add(cb.not(root.get("taglia").in(TAGLIE_STANDARD)));
                 } else {
                     predicates.add(cb.equal(root.get("taglia"), taglia));
@@ -87,18 +94,26 @@ public class ProdottoService {
 
     @Transactional(readOnly = true)
     public List<String> getAllTaglie() {
-        List<String> allTaglie = prodottoRepository.findDistinctTaglie();
+        List<String> allTaglieDb = prodottoRepository.findDistinctTaglie();
+        // Normalizza tutto in maiuscolo per evitare duplicati visivi (es. "xl" e "XL")
+        List<String> allTaglie = allTaglieDb.stream()
+                .map(String::toUpperCase)
+                .distinct()
+                .toList();
+
         List<String> result = new ArrayList<>();
         boolean hasOther = false;
 
-        for (String s : TAGLIE_STANDARD) {
-            if (allTaglie.stream().anyMatch(t -> t.equalsIgnoreCase(s))) {
-                result.add(s.toUpperCase());
+        // 1. Aggiungi le taglie standard in ordine logico (XS -> XXL)
+        for (String stdTaglia : TAGLIE_STANDARD) {
+            if (allTaglie.contains(stdTaglia)) {
+                result.add(stdTaglia);
             }
         }
 
+        // 2. Controlla se esistono taglie "non standard"
         for (String t : allTaglie) {
-            if (TAGLIE_STANDARD.stream().noneMatch(s -> s.equalsIgnoreCase(t))) {
+            if (!TAGLIE_STANDARD.contains(t)) {
                 hasOther = true;
                 break;
             }
@@ -132,9 +147,7 @@ public class ProdottoService {
         Prodotto prodotto = prodottoRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
         
-        // Lock per evitare race conditions se più admin modificano lo stock
         entityManager.lock(prodotto, LockModeType.PESSIMISTIC_WRITE);
-        
         prodotto.setStock(prodotto.getStock() + quantita);
         prodottoRepository.save(prodotto);
     }
@@ -145,7 +158,6 @@ public class ProdottoService {
                 .orElseThrow(() -> new ProductNotFoundException("Prodotto non trovato"));
         
         entityManager.lock(prodotto, LockModeType.PESSIMISTIC_WRITE);
-        
         if (prodotto.getStock() < quantita) throw new InvalidQuantityException("Stock insufficiente");
         prodotto.setStock(prodotto.getStock() - quantita);
         prodottoRepository.save(prodotto);

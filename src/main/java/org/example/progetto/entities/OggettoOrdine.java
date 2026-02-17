@@ -21,6 +21,9 @@ public class OggettoOrdine {
     @Column(name = "oggetto_ordine_id", nullable = false)
     private Long id;
 
+    @JoinColumn(name = "id_prodotto")
+    private Long prodottoId;
+
     @Column(name = "nome_prodotto", nullable = false)
     private String nomeProdotto;
 

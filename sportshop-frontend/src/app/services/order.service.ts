@@ -20,9 +20,7 @@ export class OrderService {
     return this.http.get<Order>(`${this.apiUrl}/${id}`);
   }
 
-  // Annulla ordine: invia motivo nel body come Map
-  cancelOrder(orderId: number, motivo: string): Observable<any> {
-    const body = { motivo: motivo };
-    return this.http.post(`${this.apiUrl}/annulla/${orderId}`, body);
+  cancelOrder(id: number, motivo: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/annulla/${id}`, { motivo });
   }
 }

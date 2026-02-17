@@ -10,6 +10,7 @@ import java.util.List;
 
 @Repository
 public interface OggettoCarrelloRepository extends JpaRepository<OggettoCarrello, Long> {
+    
     List<OggettoCarrello> findByCarrello(Carrello carrello);
 
     OggettoCarrello findByCarrelloAndProdotto(Carrello carrello, Prodotto prodotto);

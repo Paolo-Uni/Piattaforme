@@ -1,6 +1,6 @@
 export interface OrderItem {
   idOggetto: number;
-  nome: string;
+  nome: string; // Corrisponde a nomeProdotto nel backend
   taglia: string;
   colore: string;
   prezzo: number;
@@ -9,8 +9,9 @@ export interface OrderItem {
 
 export interface Order {
   idOrdine: number;
-  data: string; // Date arriva come stringa ISO dal backend
+  data: string; // Le date JSON arrivano come stringhe ISO
   stato: string;
   totaleOrdine: number;
+  indirizzoSpedizione: string; // Campo essenziale aggiunto
   oggetti: OrderItem[];
 }

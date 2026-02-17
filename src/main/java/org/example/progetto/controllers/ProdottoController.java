@@ -1,18 +1,17 @@
 package org.example.progetto.controllers;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.example.progetto.support.ResponseMessage;
 import org.example.progetto.entities.Prodotto;
-import org.example.progetto.exceptions.ProductAlreadyExistsException;
-import org.example.progetto.exceptions.ProductNotFoundException;
 import org.example.progetto.services.ProdottoService;
+import org.example.progetto.support.ResponseMessage;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize; // Assumendo che usi i ruoli
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,21 +24,9 @@ public class ProdottoController {
 
     private final ProdottoService prodottoService;
 
-    @GetMapping("/all")
-    public ResponseEntity<List<Prodotto>> getAllProdotti() {
-        return ResponseEntity.ok(prodottoService.getProdotti());
-    }
-
-    @GetMapping("/paged")
-    public ResponseEntity<List<Prodotto>> getAllProdottiPaged(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "nome") String sortBy) {
-        return ResponseEntity.ok(prodottoService.getProdotti(page, size, sortBy));
-    }
-
-    @GetMapping("/cerca")
-    public ResponseEntity<Page<Prodotto>> ricercaDinamica(
+    // Endpoint per la ricerca (utilizzato dalla Home e dalla pagina Prodotti)
+    @GetMapping
+    public ResponseEntity<Page<Prodotto>> getProdotti(
             @RequestParam(required = false) String nome,
             @RequestParam(required = false) String marca,
             @RequestParam(required = false) String categoria,
@@ -52,80 +39,50 @@ public class ProdottoController {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy));
         return ResponseEntity.ok(prodottoService.ricercaDinamica(nome, marca, categoria, colore, taglia, pageable));
     }
-    
-    // Endpoint di utilità per i filtri nel frontend
-    @GetMapping("/marche")
-    public ResponseEntity<List<String>> getMarche() {
-        return ResponseEntity.ok(prodottoService.getAllMarche());
-    }
-    
-    @GetMapping("/categorie")
-    public ResponseEntity<List<String>> getCategorie() {
-        return ResponseEntity.ok(prodottoService.getAllCategorie());
-    }
-
-    @GetMapping("/colori")
-    public ResponseEntity<List<String>> getColori() {
-        return ResponseEntity.ok(prodottoService.getAllColori());
-    }
-
-    @GetMapping("/taglie")
-    public ResponseEntity<List<String>> getTaglie() {
-        return ResponseEntity.ok(prodottoService.getAllTaglie());
-    }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getProdotto(@PathVariable Long id) {
         try {
             return ResponseEntity.ok(prodottoService.getProdottoById(id));
-        } catch (ProductNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseMessage(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseMessage("Prodotto non trovato."));
         }
     }
+    
+    // Endpoint per i filtri (Marche, Categorie, ecc.)
+    @GetMapping("/marche")
+    public List<String> getMarche() { return prodottoService.getAllMarche(); }
 
-    // --- SEZIONE ADMIN ---
+    @GetMapping("/categorie")
+    public List<String> getCategorie() { return prodottoService.getAllCategorie(); }
 
-    @PostMapping("/admin/aggiungi")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> aggiungiProdotto(@RequestBody Prodotto prodotto) {
+    @GetMapping("/colori")
+    public List<String> getColori() { return prodottoService.getAllColori(); }
+
+    @GetMapping("/taglie")
+    public List<String> getTaglie() { return prodottoService.getAllTaglie(); }
+
+    // --- Endpoints Amministrativi ---
+
+    @PostMapping
+    @PreAuthorize("hasRole('client_admin')") // Protezione Keycloak se configurata
+    public ResponseEntity<ResponseMessage> creaProdotto(@RequestBody @Valid Prodotto prodotto) {
         try {
             prodottoService.aggiungiProdotto(prodotto);
-            return ResponseEntity.status(HttpStatus.CREATED).body(new ResponseMessage("Prodotto aggiunto con successo"));
-        } catch (ProductAlreadyExistsException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(new ResponseMessage(e.getMessage()));
+            return ResponseEntity.ok(new ResponseMessage("Prodotto creato con successo."));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ResponseMessage(e.getMessage()));
         }
     }
 
-    @DeleteMapping("/admin/elimina/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('client_admin')") // Protezione Keycloak se configurata
     public ResponseEntity<ResponseMessage> cancellaProdotto(@PathVariable Long id) {
         try {
             prodottoService.cancellaProdotto(id);
-            return ResponseEntity.ok(new ResponseMessage("Prodotto eliminato"));
-        } catch (ProductNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseMessage(e.getMessage()));
-        }
-    }
-
-    @PostMapping("/admin/stock/aumenta")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ResponseMessage> aumentaStock(@RequestParam Long id, @RequestParam int quantita) {
-        try {
-            prodottoService.aumentaQuantitaProdotto(id, quantita);
-            return ResponseEntity.ok(new ResponseMessage("Stock aggiornato"));
+            return ResponseEntity.ok(new ResponseMessage("Prodotto eliminato."));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ResponseMessage(e.getMessage()));
-        }
-    }
-
-    @PostMapping("/admin/stock/diminuisci")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ResponseMessage> diminuisciStock(@RequestParam Long id, @RequestParam int quantita) {
-        try {
-            prodottoService.diminuisciQuantitaProdotto(id, quantita);
-            return ResponseEntity.ok(new ResponseMessage("Stock aggiornato"));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ResponseMessage(e.getMessage()));
+            return ResponseEntity.badRequest().body(new ResponseMessage("Errore durante l'eliminazione: " + e.getMessage()));
         }
     }
 }
