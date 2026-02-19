@@ -3,15 +3,12 @@ import { RouterOutlet } from '@angular/router';
 import { OAuthService } from 'angular-oauth2-oidc';
 import { authConfig } from './core/auth.config';
 import { CommonModule } from '@angular/common';
-// IMPORTANTE: Importiamo la Navbar
 import { NavbarComponent } from './components/navbar/navbar.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  // IMPORTANTE: Aggiungiamo NavbarComponent agli imports
   imports: [CommonModule, RouterOutlet, NavbarComponent],
-  // Colleghiamo il file HTML esterno invece di usare quello inline
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
@@ -24,11 +21,19 @@ export class AppComponent {
   private configureAuth() {
     this.oauthService.configure(authConfig);
 
-    // Gestione della Promise di login
+    // FIX FONDAMENTALE: Usa il localStorage invece del sessionStorage di default.
+    // In questo modo il token sopravvive al refresh della pagina e alla chiusura della scheda.
+    this.oauthService.setStorage(localStorage);
+
     this.oauthService.loadDiscoveryDocumentAndTryLogin()
       .then(() => {
-        this.oauthService.setupAutomaticSilentRefresh();
-        console.log('Keycloak inizializzato.');
+        // Se l'utente ha un token ancora valido nel localStorage, avvia il timer per aggiornarlo in background
+        if (this.oauthService.hasValidAccessToken()) {
+          this.oauthService.setupAutomaticSilentRefresh();
+          console.log('Sessione utente ripristinata dal localStorage.');
+        } else {
+          console.log('Nessuna sessione locale attiva.');
+        }
       })
       .catch(err => {
         console.error('Errore Keycloak:', err);
