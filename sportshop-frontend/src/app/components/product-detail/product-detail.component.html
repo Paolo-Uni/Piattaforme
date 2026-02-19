@@ -1,7 +1,10 @@
 <div class="container mt-5" *ngIf="product">
   <div class="row">
     <div class="col-md-6">
-      <img [src]="product.imageUrl || 'assets/placeholder.png'" class="img-fluid rounded" alt="...">
+      <img [src]="'/assets/images/' + product.id + '.jpg'"
+           onerror="this.onerror=null; this.src='/assets/placeholder.png'"
+           class="img-fluid rounded"
+           alt="Immagine Prodotto">
     </div>
     <div class="col-md-6">
       <h2>{{ product.nome }}</h2>
