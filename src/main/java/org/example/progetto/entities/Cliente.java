@@ -38,7 +38,7 @@ public class Cliente {
     private String indirizzo;
 
     @OneToMany(mappedBy = "cliente")
-    @JsonIgnore // Evita loop e caricamento di tutto lo storico ordini quando chiami il cliente
+    @JsonIgnore
     private List<Ordine> ordini = new ArrayList<>();
 
     @OneToOne(mappedBy = "cliente", cascade = CascadeType.ALL)

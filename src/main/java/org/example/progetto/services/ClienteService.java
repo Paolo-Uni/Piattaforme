@@ -74,7 +74,6 @@ public class ClienteService {
                 .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato con id: " + id));
     }
 
-    // ... Metodi di ricerca invariati ...
     @Transactional(readOnly = true)
     public List<ClienteDTO> getClientiByNome(String nome) {
         return clienteRepository.findByNome(nome).stream().map(this::toDTO).collect(Collectors.toList());
@@ -95,12 +94,10 @@ public class ClienteService {
         Cliente cliente = clienteRepository.findById(id)
                 .orElseThrow(() -> new ClienteNotFoundException("Cliente non trovato con ID: " + id));
 
-        // Controllo ordini: Se ha ordini, impediamo la cancellazione per integrità dati
         if (ordineRepository.existsByCliente(cliente)) {
             throw new InvalidOperationException("Impossibile eliminare un cliente che ha già effettuato ordini.");
         }
 
-        // Pulizia Carrello: Se ha un carrello, lo svuotiamo e cancelliamo
         carrelloRepository.findByCliente(cliente).ifPresent(c -> {
             oggettoCarrelloRepository.deleteAllByCarrello(c);
             carrelloRepository.delete(c);
@@ -137,8 +134,7 @@ public class ClienteService {
         if (request.getCognome() != null && !request.getCognome().isBlank()) {
             cliente.setCognome(request.getCognome());
         }
-        
-        // FIX: Gestione corretta telefono (evita NullPointerException e permette rimozione)
+
         if (request.getTelefono() != null) {
             if (request.getTelefono().isBlank()) {
                 cliente.setTelefono(null);
@@ -153,7 +149,6 @@ public class ClienteService {
             }
         }
 
-        // FIX: Gestione indirizzo (permette rimozione)
         if (request.getIndirizzo() != null) {
             if (request.getIndirizzo().isBlank()) {
                 cliente.setIndirizzo(null);

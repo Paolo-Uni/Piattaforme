@@ -1,5 +1,8 @@
 package org.example.progetto.support;
 
+import lombok.RequiredArgsConstructor;
+import org.example.progetto.entities.Cliente;
+import org.example.progetto.repositories.ClienteRepository;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
@@ -14,16 +17,40 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Component
+@RequiredArgsConstructor
 public class CustomJwtConverter implements Converter<Jwt, AbstractAuthenticationToken> {
+
+    private final ClienteRepository clienteRepository;
 
     @Override
     public AbstractAuthenticationToken convert(Jwt jwt) {
         Collection<GrantedAuthority> authorities = extractAuthorities(jwt);
-        // Usa l'email come principal name (più utile dell'ID numerico)
-        String principalClaimName = jwt.getClaimAsString("email");
-        if (principalClaimName == null) {
-            principalClaimName = jwt.getSubject();
+
+        // 1. Cerca l'email diretta
+        String email = jwt.getClaimAsString("email");
+        
+        // 2. Fallback sul preferred_username (Keycloak lo include quasi sempre)
+        if (email == null) {
+            email = jwt.getClaimAsString("preferred_username");
         }
+        
+        // 3. Fallback estremo sul Subject (ID Keycloak)
+        String principalClaimName = (email != null) ? email : jwt.getSubject();
+
+        // SINCRONIZZAZIONE AUTOMATICA: Se l'utente non esiste nel DB, lo crea
+        if (principalClaimName != null && !clienteRepository.existsByEmail(principalClaimName)) {
+            Cliente nuovoCliente = new Cliente();
+            nuovoCliente.setEmail(principalClaimName);
+
+            String nome = jwt.getClaimAsString("given_name");
+            nuovoCliente.setNome(nome != null ? nome : "Utente");
+
+            String cognome = jwt.getClaimAsString("family_name");
+            nuovoCliente.setCognome(cognome != null ? cognome : "Registrato");
+
+            clienteRepository.save(nuovoCliente);
+        }
+
         return new JwtAuthenticationToken(jwt, authorities, principalClaimName);
     }
 
@@ -38,7 +65,6 @@ public class CustomJwtConverter implements Converter<Jwt, AbstractAuthentication
             return Collections.emptyList();
         }
 
-        // Mappa i ruoli Keycloak (es. "admin") in Authority Spring (es. "ROLE_ADMIN")
         return roles.stream()
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()))
                 .collect(Collectors.toList());

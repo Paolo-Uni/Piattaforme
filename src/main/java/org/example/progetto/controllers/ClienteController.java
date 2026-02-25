@@ -34,7 +34,6 @@ public class ClienteController {
     public ResponseEntity<?> getProfilo(Authentication authentication) {
         try {
             String email = authentication.getName();
-            // Recupera l'entità e la converte in DTO per includere l'indirizzo
             return ResponseEntity.ok(clienteService.toDTO(clienteService.getClienteByEmail(email)));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseMessage("Utente non trovato."));

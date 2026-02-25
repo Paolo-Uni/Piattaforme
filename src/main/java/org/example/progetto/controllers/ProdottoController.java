@@ -24,7 +24,6 @@ public class ProdottoController {
 
     private final ProdottoService prodottoService;
 
-    // Endpoint per la ricerca (utilizzato dalla Home e dalla pagina Prodotti)
     @GetMapping
     public ResponseEntity<Page<Prodotto>> getProdotti(
             @RequestParam(required = false) String nome,
@@ -62,10 +61,9 @@ public class ProdottoController {
     @GetMapping("/taglie")
     public List<String> getTaglie() { return prodottoService.getAllTaglie(); }
 
-    // --- Endpoints Amministrativi ---
 
     @PostMapping
-    @PreAuthorize("hasRole('client_admin')") // Protezione Keycloak se configurata
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResponseMessage> creaProdotto(@RequestBody @Valid Prodotto prodotto) {
         try {
             prodottoService.aggiungiProdotto(prodotto);
@@ -76,13 +74,39 @@ public class ProdottoController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('client_admin')") // Protezione Keycloak se configurata
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResponseMessage> cancellaProdotto(@PathVariable Long id) {
         try {
             prodottoService.cancellaProdotto(id);
             return ResponseEntity.ok(new ResponseMessage("Prodotto eliminato."));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new ResponseMessage("Errore durante l'eliminazione: " + e.getMessage()));
+        }
+    }
+
+    @PatchMapping("/{id}/incrementa")
+    @PreAuthorize("hasRole('ADMIN')") //
+    public ResponseEntity<ResponseMessage> incrementaStock(
+            @PathVariable Long id,
+            @RequestParam int quantita) {
+        try {
+            prodottoService.aumentaQuantitaProdotto(id, quantita);
+            return ResponseEntity.ok(new ResponseMessage("Stock incrementato con successo."));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ResponseMessage(e.getMessage()));
+        }
+    }
+
+    @PatchMapping("/{id}/decrementa")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponseMessage> decrementaStock(
+            @PathVariable Long id,
+            @RequestParam int quantita) {
+        try {
+            prodottoService.diminuisciQuantitaProdotto(id, quantita);
+            return ResponseEntity.ok(new ResponseMessage("Stock decrementato con successo."));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ResponseMessage(e.getMessage()));
         }
     }
 }

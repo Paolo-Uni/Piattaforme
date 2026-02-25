@@ -22,14 +22,13 @@ public class OrdineController {
 
     @GetMapping("/miei-ordini")
     public ResponseEntity<List<OrdineDTO>> getMieiOrdini(Authentication authentication) {
-        String email = authentication.getName(); // Ottiene l'email dal token JWT (Keycloak)
+        String email = authentication.getName();
         return ResponseEntity.ok(ordineService.getOrdiniByEmail(email));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getOrdine(@PathVariable Long id) {
         try {
-            // Usa il metodo che restituisce il DTO per coerenza con il Frontend
             OrdineDTO ordineDTO = ordineService.getOrdineDTOById(id);
             return ResponseEntity.ok(ordineDTO); 
         } catch (Exception e) {

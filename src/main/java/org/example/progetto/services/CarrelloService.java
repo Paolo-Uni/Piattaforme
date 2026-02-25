@@ -208,7 +208,6 @@ public class CarrelloService {
 
         Transazione transazione = new Transazione();
         transazione.setOrdine(ordine);
-        // FIX: Uso LocalDateTime per coerenza
         transazione.setData(LocalDateTime.now());
         transazione.setImporto(totaleOrdine);
 
@@ -219,7 +218,6 @@ public class CarrelloService {
 
             for (OggettoCarrello oc : prodottiCarrello) {
                 OggettoOrdine oo = new OggettoOrdine();
-                // FIX: Salviamo l'ID originale per lo storico
                 oo.setProdottoId(oc.getProdotto().getId()); 
                 oo.setNomeProdotto(oc.getProdotto().getNome());
                 oo.setTaglia(oc.getProdotto().getTaglia());
@@ -234,7 +232,6 @@ public class CarrelloService {
             Spedizione spedizione = new Spedizione();
             spedizione.setOrdine(ordine);
             spedizione.setIndirizzoSpedizione(indirizzoSpedizione);
-            // FIX: Uso LocalDateTime
             spedizione.setDataPrevista(LocalDateTime.now().plusDays(7));
             spedizione.setStato("In preparazione");
             spedizioneRepository.save(spedizione);

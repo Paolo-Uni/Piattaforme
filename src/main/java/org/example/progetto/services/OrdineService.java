@@ -50,18 +50,13 @@ public class OrdineService {
             throw new InvalidOperationException("Impossibile annullare l'ordine nello stato attuale: " + statoAttuale);
         }
 
-        // 1. Gestione Spedizione
         Spedizione sped = ordine.getSpedizione();
         if (sped != null) {
             entityManager.lock(sped, LockModeType.PESSIMISTIC_WRITE);
             sped.setStato("Annullata a seguito di cancellazione ordine");
         }
 
-        // 2. Ripristino dello Stock (CORREZIONE IMPORTANTE)
         for (OggettoOrdine item : ordine.getOggetti()) {
-            // Cerchiamo il prodotto originale. 
-            // Se abbiamo salvato l'ID originale in OggettoOrdine usiamo quello, altrimenti cerchiamo per nome o ID se disponibile.
-            // Qui assumiamo che OggettoOrdine abbia il riferimento o l'ID (come aggiunto nella fix delle Entity).
             if (item.getProdottoId() != null) {
                 prodottoRepository.findById(item.getProdottoId()).ifPresent(prodotto -> {
                     entityManager.lock(prodotto, LockModeType.PESSIMISTIC_WRITE);
@@ -140,8 +135,7 @@ public class OrdineService {
         dto.setData(ordine.getDataOrdine());
         dto.setStato(ordine.getStato().toString());
         dto.setTotaleOrdine(ordine.getTotale());
-        
-        // FIX: Mappatura corretta dell'indirizzo spedizione
+
         if (ordine.getSpedizione() != null) {
             dto.setIndirizzoSpedizione(ordine.getSpedizione().getIndirizzoSpedizione());
         }

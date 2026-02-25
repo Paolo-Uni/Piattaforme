@@ -30,6 +30,6 @@ public class OggettoCarrello {
 
     @ManyToOne
     @JoinColumn(name = "carrello", nullable = false)
-    @JsonIgnore // Fondamentale per evitare loop infiniti
+    @JsonIgnore
     private Carrello carrello;
 }

@@ -39,8 +39,7 @@ public class CarrelloController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ResponseMessage(e.getMessage()));
         }
     }
-    
-    // Endpoint per rimuovere completamente un prodotto (cestino)
+
     @DeleteMapping("/rimuovi/{idProdotto}")
     public ResponseEntity<ResponseMessage> rimuoviProdotto(@PathVariable Long idProdotto, Authentication authentication) {
         try {

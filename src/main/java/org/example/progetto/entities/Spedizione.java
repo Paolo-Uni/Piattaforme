@@ -21,7 +21,6 @@ public class Spedizione {
     @Column(name = "spedizione_id", nullable = false)
     private Long id;
 
-    // Aumentato a 255 caratteri, 50 sono pochi per un indirizzo
     @Column(name = "indirizzo_spedizione", nullable = false)
     private String indirizzoSpedizione;
 
@@ -33,6 +32,6 @@ public class Spedizione {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ordine")
-    @JsonIgnore // Evita ricorsione
+    @JsonIgnore
     private Ordine ordine;
 }

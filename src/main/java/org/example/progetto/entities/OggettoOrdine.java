@@ -21,7 +21,7 @@ public class OggettoOrdine {
     @Column(name = "oggetto_ordine_id", nullable = false)
     private Long id;
 
-    @JoinColumn(name = "id_prodotto")
+    @JoinColumn(name = "prodotto_id")
     private Long prodottoId;
 
     @Column(name = "nome_prodotto", nullable = false)
@@ -44,7 +44,7 @@ public class OggettoOrdine {
 
     @ManyToOne
     @JoinColumn(name = "ordine")
-    @JsonIgnore // Evita ricorsione
+    @JsonIgnore
     private Ordine ordine;
 
 }
